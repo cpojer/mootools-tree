@@ -12,6 +12,7 @@ var Tree = new Class({
 	options: {
 		/*onChange: $empty,*/
 		offset: 0,
+		cloneOpacity: 0.8,
 		checkDrag: $lambda(true),
 		checkDrop: $lambda(true)
 	},
@@ -19,26 +20,25 @@ var Tree = new Class({
 	initialize: function(element, options){
 		this.setOptions(options);
 		this.element = document.id(element);
-		this.collapse = this.element.retrieve('collapse');
-
+		
 		var padding = (this.element.getStyle('paddingLeft').toInt() || 0) + this.element.getElement('li').getStyle('paddingLeft').toInt(),
 			self = this,
-			timer, previous;
+			timer, previous, collapse;
 
 		this.mouseup = this.mouseup.bind(this);
 		this.mousedown = function(e){
+			if (collapse == undefined) collapse = self.element.retrieve('collapse') || null;
+
 			e.stop();
 			if(!self.options.checkDrag.apply(self, [this])) return;
 			e.target = document.id(e.target);
-			if (self.collapse && e.target.match(self.collapse.options.selector)) return;
+			if (collapse && e.target.match(collapse.options.selector)) return;
 
 			var element = this;
 			self.clone = this.clone().store('parent', this).setStyles({
-				position: 'absolute',
-				zIndex: 50,
 				left: e.page.x + 16,
 				top: e.page.y + 16,
-				opacity: 0.8
+				opacity: self.options.cloneOpacity
 			}).addClass('drag').inject(document.body);
 
 			self.clone.makeDraggable({
@@ -60,14 +60,14 @@ var Tree = new Class({
 					var droppable = e.target.get('tag') == 'li' ? e.target : e.target.getParent('li');
 					if (!droppable || !droppable.getParent('ul.tree')) return;
 					
-					if (self.collapse){
+					if (collapse){
 						var ul = droppable.getElement('ul');
-						if (ul && self.collapse.isCollapsed(ul)){
+						if (ul && collapse.isCollapsed(ul)){
 							droppable.set('tween', {duration: 150}).fade(0.5);
 							previous = droppable;
 							timer = (function(){
 								droppable.fade(1);
-								self.collapse.expand(droppable);
+								collapse.expand(droppable);
 							}).delay(300);
 						}
 					}

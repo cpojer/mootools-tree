@@ -54,6 +54,11 @@ div.treeIndicator {
 	line-height: 1px;
 }
 
+li.drag {
+	position: absolute;
+	z-index: 50;
+}
+
 li.drag span.dispose {
 	display: none;
 }
