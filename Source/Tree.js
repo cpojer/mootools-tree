@@ -29,6 +29,7 @@ var Tree = new Class({
 		this.mousedown = function(e){
 			e.stop();
 			if(!self.options.checkDrag.apply(self, [this])) return;
+			e.target = document.id(e.target);
 			if (self.collapse && e.target.match(self.collapse.options.selector)) return;
 
 			var element = this;
