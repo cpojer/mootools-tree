@@ -76,6 +76,7 @@
 					this.getParent('li').dispose();
 				}
 			});
+
 			$('tree').addEvents({
 				'mouseover:relay(li)': function(){
 					this.getElement('span').adopt(dispose);
@@ -95,7 +96,7 @@
 
 			// Example #3
 			new Tree('both', {
-				offset: 16
+				indicatorOffset: 16 // This is needed because we want the indicator to be aligned with the text, not the expand/collapse icons
 			});
 			new Collapse('both');
 		});

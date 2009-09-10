@@ -25,7 +25,7 @@ this.Collapse.Cookie = new Class({
 
 	prepare: function(){
 		var obj = this.getCookieData();
-		this.element.getElements(this.options.listSelector).each(function(el){console.log(el);
+		this.element.getElements(this.options.listSelector).each(function(el){
 			if (!el.getElement(this.options.childSelector)) return;
 			
 			var state = obj[this.options.getAttribute.apply(this, [el])];

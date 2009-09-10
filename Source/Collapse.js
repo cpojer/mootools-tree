@@ -24,19 +24,22 @@ this.Collapse = new Class({
 	},
 
 	prepare: function(){
-		this.element.getElements(this.options.listSelector).each(function(el){
-			var ul = el.getElement(this.options.childSelector),
-				icon = el.getElement(this.options.selector);
+		this.element.getElements(this.options.listSelector).each(this.updateElement.bind(this));
+	},
 
-			if (!ul){
-				icon.set('opacity', 0);
-				return
-			}
+	updateElement: function(el){
+		var ul = el.getElement(this.options.childSelector),
+			icon = el.getElement(this.options.selector);
 
-			if (icon.appearOn) icon.appearOn(el, [1, 0.5]);
-			if (this.isCollapsed(ul)) icon.removeClass('collapse');
-			else icon.addClass('collapse');
-		}, this);
+		if (!ul || !ul.getChildren().length){
+			icon.set('opacity', 0);
+			return
+		}
+
+		icon.set('opacity', 0.5);
+		if (icon.appearOn) icon.appearOn(el, [1, 0.5]);
+		if (this.isCollapsed(ul)) icon.removeClass('collapse');
+		else icon.addClass('collapse');
 	},
 
 	attach: function(){
