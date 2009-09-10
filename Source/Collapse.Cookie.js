@@ -5,10 +5,15 @@ this.Collapse.Cookie = new Class({
 	Extends: this.Collapse,
 
 	options: {
-		attribute: 'id',
+
+		getAttribute: function(element){
+			return element.get('id');
+		},
+
 		getIdentifier: function(element){
 			return 'collapse_' + element.get('id') + '_' + element.get('class').split(' ').join('_');
 		}
+		
 	},
 
 	initialize: function(element, options){
@@ -16,6 +21,19 @@ this.Collapse.Cookie = new Class({
 		this.cookie = this.options.getIdentifier.apply(this, [document.id(element)]);
 
 		this.parent(element);
+	},
+
+	prepare: function(){
+		var obj = this.getCookieData();
+		this.element.getElements(this.options.listSelector).each(function(el){console.log(el);
+			if (!el.getElement(this.options.childSelector)) return;
+			
+			var state = obj[this.options.getAttribute.apply(this, [el])];
+			if (state == 1) this.expand(el);
+			else if (state == 0) this.collapse(el);
+		}, this);
+
+		this.parent();
 	},
 
 	getCookieData: function(){
@@ -28,21 +46,8 @@ this.Collapse.Cookie = new Class({
 
 	update: function(li, state){
 		var obj = this.getCookieData();
-		obj[li.get(this.options.attribute)] = state;
+		obj[this.options.getAttribute.apply(this, [li])] = state;
 		Cookie.write(this.cookie, JSON.encode(obj), {duration: 30});
-	},
-
-	prepare: function(){
-		var obj = this.getCookieData();
-		this.element.getElements('li').each(function(el){
-			if (!el.getElement('ul')) return;
-			
-			var state = obj[el.get(this.options.attribute)];
-			if (state == 1) this.expand(el);
-			else if (state == 0) this.collapse(el);
-		}, this);
-
-		this.parent();
 	},
 
 	expand: function(li){

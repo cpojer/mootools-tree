@@ -5,7 +5,9 @@ this.Collapse = new Class({
 	Implements: [Options],
 
 	options: {
-		selector: 'a.expand'
+		selector: 'a.expand',
+		listSelector: 'li',
+		childSelector: 'ul'
 	},
 
 	initialize: function(element, options){
@@ -22,8 +24,8 @@ this.Collapse = new Class({
 	},
 
 	prepare: function(){
-		this.element.getElements('li').each(function(el){
-			var ul = el.getElement('ul'),
+		this.element.getElements(this.options.listSelector).each(function(el){
+			var ul = el.getElement(this.options.childSelector),
 				icon = el.getElement(this.options.selector);
 
 			if (!ul){
@@ -54,23 +56,23 @@ this.Collapse = new Class({
 	toggle: function(element, e){
 		if (e) e.stop();
 		
-		var li = element.get('tag') == 'li' ? element : element.getParent('li');
+		var li = element.match(this.options.listSelector) ? element : element.getParent(this.options.listSelector);
 
-		if (this.isCollapsed(li.getElement('ul'))) this.expand(li);
+		if (this.isCollapsed(li.getElement(this.options.childSelector))) this.expand(li);
 		else this.collapse(li);
 
 		return this;
 	},
 
 	expand: function(li){
-		var ul = li.getElement('ul');
+		var ul = li.getElement(this.options.childSelector);
 		ul.setStyle('display', 'block');
 		li.getElement(this.options.selector).addClass('collapse');
 		return this;
 	},
 
 	collapse: function(li){
-		var ul = li.getElement('ul');
+		var ul = li.getElement(this.options.childSelector);
 		ul.setStyle('display', 'none');
 		li.getElement(this.options.selector).removeClass('collapse');
 		return this;
