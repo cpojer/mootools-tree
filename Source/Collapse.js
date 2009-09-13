@@ -43,7 +43,7 @@ this.Collapse = new Class({
 			return
 		}
 
-		icon.fade(1);
+		icon.fade(0.5);
 		if (this.isCollapsed(ul)) icon.removeClass('collapse');
 		else icon.addClass('collapse');
 	},
