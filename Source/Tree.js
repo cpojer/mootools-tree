@@ -21,8 +21,8 @@ var Tree = new Class({
 	initialize: function(element, options){
 		this.setOptions(options);
 		this.element = document.id(element);
-		this.padding = (this.element.getStyle('paddingLeft').toInt() || 0) + this.element.getElement('li').getStyle('paddingLeft').toInt();
-
+		this.padding = this.element.getElement('li').getLeft() - this.element.getLeft() + this.options.indicatorOffset;
+		
 		var self = this;
 		this.mousedownHandler = function(e){
 			self.mousedown(this, e);

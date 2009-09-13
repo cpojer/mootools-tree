@@ -19,6 +19,13 @@ this.Collapse = new Class({
 			self.toggle(this, e);
 		};
 
+		this.mouseover = function(){
+			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(1);
+		};
+		this.mouseout = function(){
+			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(0.5);
+		};
+
 		this.prepare();
 		this.attach();
 	},
@@ -31,25 +38,33 @@ this.Collapse = new Class({
 		var ul = el.getElement(this.options.childSelector),
 			icon = el.getElement(this.options.selector);
 
-		if (!ul || !ul.getChildren().length){
-			icon.set('opacity', 0);
+		if (!this.hasChildren(el)){
+			icon.fade(0);
 			return
 		}
 
-		icon.set('opacity', 0.5);
-		if (icon.appearOn) icon.appearOn(el, [1, 0.5]);
+		icon.fade(1);
 		if (this.isCollapsed(ul)) icon.removeClass('collapse');
 		else icon.addClass('collapse');
 	},
 
 	attach: function(){
-		this.element.addEvent('click:relay(' + this.options.selector + ')', this.handler);
+		var events = {};
+		events['click:relay(' + this.options.selector + ')'] = this.handler;
+		events['mouseover:relay(' + this.options.listSelector + ')'] = this.mouseover;
+		events['mouseout:relay(' + this.options.listSelector + ')'] = this.mouseout;
+		this.element.addEvents(events);
 		return this;
 	},
 
 	detach: function(){
-		this.element.removeEvent('click:relay(' + this.options.selector + ')', this.handler);
+		this.element.removeEvent('click:relay(' + this.options.selector + ')', this.handler).removeEvent('mouseover:relay(' + this.options.listSelector + ')', this.mouseover).removeEvent('mouseout:relay(' + this.options.listSelector + ')', this.mouseout);
 		return this;
+	},
+
+	hasChildren: function(el){
+		var ul = el.getElement(this.options.childSelector);
+		return ul && ul.getChildren().length;
 	},
 
 	isCollapsed: function(ul){
