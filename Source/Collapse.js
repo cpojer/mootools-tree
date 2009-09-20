@@ -5,6 +5,8 @@ this.Collapse = new Class({
 	Implements: [Options],
 
 	options: {
+		animate: true,
+		fadeOpacity: 0.5,
 		selector: 'a.expand',
 		listSelector: 'li',
 		childSelector: 'ul'
@@ -23,7 +25,7 @@ this.Collapse = new Class({
 			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(1);
 		};
 		this.mouseout = function(){
-			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(0.5);
+			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(self.options.fadeOpacity);
 		};
 
 		this.prepare();
@@ -31,7 +33,9 @@ this.Collapse = new Class({
 	},
 
 	prepare: function(){
-		this.element.getElements(this.options.listSelector).each(this.updateElement.bind(this));
+		this.preparation = true;
+		this.element.getElements(this.options.listSelector).each(this.updateElement, this);
+		this.preparation = false;
 	},
 
 	updateElement: function(el){
@@ -39,11 +43,14 @@ this.Collapse = new Class({
 			icon = el.getElement(this.options.selector);
 
 		if (!this.hasChildren(el)){
-			icon.fade(0);
+			if (!this.options.animate || this.preparation) icon.set('opacity', 0);
+			else icon.fade(0);
 			return
 		}
 
-		icon.fade(0.5);
+		if (this.options.animate) icon.fade(this.options.fadeOpacity);
+		else icon.set('opacity', this.options.fadeOpacity);
+		
 		if (this.isCollapsed(ul)) icon.removeClass('collapse');
 		else icon.addClass('collapse');
 	},
@@ -51,8 +58,11 @@ this.Collapse = new Class({
 	attach: function(){
 		var events = {};
 		events['click:relay(' + this.options.selector + ')'] = this.handler;
-		events['mouseover:relay(' + this.options.listSelector + ')'] = this.mouseover;
-		events['mouseout:relay(' + this.options.listSelector + ')'] = this.mouseout;
+		if (this.options.animate){
+			events['mouseover:relay(' + this.options.listSelector + ')'] = this.mouseover;
+			events['mouseout:relay(' + this.options.listSelector + ')'] = this.mouseout;
+		}
+		
 		this.element.addEvents(events);
 		return this;
 	},
