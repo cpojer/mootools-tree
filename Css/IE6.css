@@ -1,0 +1,20 @@
+div.content {
+	height: 1px;
+}
+
+ul.tree li {
+	height: 1px;
+}
+
+ul.tree li span.dispose, li.drag span.dispose {
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+ul.collapse li ul {
+	clear: left;
+}
+ul.collapse span {
+	float: left;
+}
