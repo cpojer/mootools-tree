@@ -1,3 +1,24 @@
+/*
+Script: Collapse.Cookie.js
+	MooTools Tree Components
+
+License:
+	MIT-style license.
+
+Version:
+	1.0
+
+Copyright:
+	Copyright (c) 2009 [Christoph Pojer](http://cpojer.net).
+
+Dependencies:
+	- Collapse.js
+
+Options:
+	- getAttribute(element): (function) Returns the attribute to distinct between different elements, uses the id by default
+	- getIdentifier(element): (function) Returns the name for the cookie, uses the id and className by default
+*/
+
 (function(){
 
 this.Collapse.Cookie = new Class({
