@@ -13,8 +13,8 @@ Copyright:
 
 Dependencies:
 	- MooTools Core 1.2.3 or newer
-	- MooTools More 1.2.4.1 or newer: Drag.js, Drag.Move.js
-	- When using MooTools More 1.2.3.x: Add "Delegation.js" as provided in the Demos/ Folder of the Tree components
+	- MooTools More 1.2.4.1 or newer: Drag.js, Drag.Move.js, Element.Delegation.js
+	- When using MooTools More 1.2.3.x: Add "Delegation.js" as provided in the Demos/ Folder of the Tree Components
 
 Options:
 	- indicatorOffset: (number, defaults to *0*) The offset of the indicator from the left
