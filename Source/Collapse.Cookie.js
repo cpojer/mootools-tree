@@ -8,10 +8,9 @@ authors:
 requires:
 	core/1.2.4: '*'
 	more/1.2.4: [Drag, Drag.Move, Element.Delegation]
-	collapse
 
 provides:
-  - collapse.cookie
+	- collapse.cookie
 
 options:
 	- getAttribute(element): (function) Returns the attribute to distinct between different elements, uses the id by default
