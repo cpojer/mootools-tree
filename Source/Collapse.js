@@ -10,7 +10,7 @@ requires:
 	more/1.2.4: [Drag, Drag.Move, Element.Delegation]
 
 provides:
-  - collapse
+	- collapse
   
 options:
 	- animate: (boolean, defaults to *true*) Whether to animate the expand/collapse elements or not

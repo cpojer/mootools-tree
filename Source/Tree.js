@@ -10,7 +10,7 @@ requires:
 	more/1.2.4: [Drag, Drag.Move, Element.Delegation]
 
 provides:
-  - tree
+	- tree
 
 license:
 	MIT-style license
