@@ -12,12 +12,11 @@ requires:
 
 provides:
   - collapse.cookie
-...
 
 options:
 	- getAttribute(element): (function) Returns the attribute to distinct between different elements, uses the id by default
 	- getIdentifier(element): (function) Returns the name for the cookie, uses the id and className by default
-
+...
 */
 
 (function(){

@@ -11,15 +11,14 @@ requires:
 
 provides:
   - collapse
-...
-
+  
 options:
 	- animate: (boolean, defaults to *true*) Whether to animate the expand/collapse elements or not
 	- fadeOpacity: (number, defaults to *0.5*) The opacity to be used for expand/collapse elements when they are not currently hovered
 	- selector: (string, defaults to *a.expand*) The selector to be used to determine the expand/collapse elements
 	- listSelector: (string, defaults to *li*) The element which contains elements determined by the *selector* and *childSelector* options
 	- childSelector: (string, defaults to *ul*) The selector for the elements that are to be collapsed and expanded
-
+...
 */
 
 (function(){

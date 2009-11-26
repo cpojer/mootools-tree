@@ -11,7 +11,6 @@ requires:
 
 provides:
   - tree
-...
 
 license:
 	MIT-style license
@@ -28,7 +27,7 @@ options:
 
 events:
 	- onChange(): fires when the tree changes. Can be used in conjunction with the "serialize" method.
-
+...
 */
 
 var Tree = new Class({
