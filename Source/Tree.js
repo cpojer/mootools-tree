@@ -3,30 +3,30 @@
 description: Tree
 
 authors:
-	- Christoph Pojer
+  - Christoph Pojer
 
 requires:
-	core/1.2.4: '*'
-	more/1.2.4: [Drag, Drag.Move, Element.Delegation]
+  core/1.2.4: '*'
+  more/1.2.4: [Drag, Drag.Move, Element.Delegation]
 
 provides:
-	- tree
+  - tree
 
 license:
-	MIT-style license
+  MIT-style license
 
 version:
-	1.0
+  1.0
 
 options:
-	- indicatorOffset: (number, defaults to *0*) The offset of the indicator from the left
-	- cloneOffset: (string, defaults to *{x: 16, y: 16}*) The offset to be used for the cloned element
-	- cloneOpacity: (boolean, defaults to *0.8*) The opacity of the currently dragged element
-	- checkDrag(element): (function, returns boolean) Checks if the element that is to be dragged is draggable.
-	- checkDrop(droppable, dropOptions): (function, returns boolean) Checks if the droppable element can be dropped on
+  - indicatorOffset: (number, defaults to *0*) The offset of the indicator from the left
+  - cloneOffset: (string, defaults to *{x: 16, y: 16}*) The offset to be used for the cloned element
+  - cloneOpacity: (boolean, defaults to *0.8*) The opacity of the currently dragged element
+  - checkDrag(element): (function, returns boolean) Checks if the element that is to be dragged is draggable.
+  - checkDrop(droppable, dropOptions): (function, returns boolean) Checks if the droppable element can be dropped on
 
 events:
-	- onChange(): fires when the tree changes. Can be used in conjunction with the "serialize" method.
+  - onChange(): fires when the tree changes. Can be used in conjunction with the "serialize" method.
 ...
 */
 
