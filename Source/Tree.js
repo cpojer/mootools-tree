@@ -1,30 +1,34 @@
 /*
-Script: Tree.js
-	MooTools Tree Components
+---
+description: Tree
 
-License:
-	MIT-style license.
+authors:
+	- Christoph Pojer
 
-Version:
+requires:
+	core/1.2.4: '*'
+	more/1.2.4: [Drag, Drag.Move, Element.Delegation]
+
+provides:
+  - tree
+...
+
+license:
+	MIT-style license
+
+version:
 	1.0
 
-Copyright:
-	Copyright (c) 2009 [Christoph Pojer](http://cpojer.net).
-
-Dependencies:
-	- MooTools Core 1.2.3 or newer
-	- MooTools More 1.2.4.1 or newer: Drag.js, Drag.Move.js, Element.Delegation.js
-	- When using MooTools More 1.2.3.x: Add "Delegation.js" as provided in the Demos/ Folder of the Tree Components
-
-Options:
+options:
 	- indicatorOffset: (number, defaults to *0*) The offset of the indicator from the left
 	- cloneOffset: (string, defaults to *{x: 16, y: 16}*) The offset to be used for the cloned element
 	- cloneOpacity: (boolean, defaults to *0.8*) The opacity of the currently dragged element
 	- checkDrag(element): (function, returns boolean) Checks if the element that is to be dragged is draggable.
 	- checkDrop(droppable, dropOptions): (function, returns boolean) Checks if the droppable element can be dropped on
 
-Events:
+events:
 	- onChange(): fires when the tree changes. Can be used in conjunction with the "serialize" method.
+
 */
 
 var Tree = new Class({
