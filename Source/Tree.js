@@ -109,7 +109,7 @@ var Tree = new Class({
 		if (!e.target) return;
 
 		var droppable = e.target.get('tag') == 'li' ? e.target : e.target.getParent('li');
-		if (!droppable || !droppable.getParent('ul.tree')) return;
+		if (!droppable || !droppable.getParent(this.element)) return;
 
 		if (this.collapse){
 			var ul = droppable.getElement('ul');
