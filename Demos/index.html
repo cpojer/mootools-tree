@@ -50,7 +50,8 @@
 
 	<script type="text/javascript" src="mootools-core.js"></script>
 	<script type="text/javascript" src="mootools-more.js"></script>
-	<script type="text/javascript" src="Delegation.js"></script>
+	<script type="text/javascript" src="mootools-class-extras.js"></script>
+	
 	<script type="text/javascript" src="../Source/Tree.js"></script>
 	<script type="text/javascript" src="../Source/Collapse.js"></script>
 	<script type="text/javascript" src="../Source/Collapse.Cookie.js"></script>
@@ -59,6 +60,7 @@
 		window.addEvent('domready', function(){
 			// Example #1
 			new Tree('tree', {
+				
 				checkDrag: function(element){
 					return !element.hasClass('nodrag');
 				},
@@ -66,6 +68,7 @@
 				checkDrop: function(element, options){
 					return !element.hasClass('nodrop');
 				}
+				
 			});
 
 			var dispose = new Element('span', {'class': 'dispose', text: '(remove)'}).addEvents({
@@ -88,7 +91,7 @@
 
 			var i = 1;
 			$('addItem').addEvent('click', function(){
-				new Element('li').adopt(new Element('span', {text: 'New Item #' + (i++)})).inject('tree')
+				new Element('li').adopt(new Element('span', {text: 'New Item #' + (i++)})).inject('tree');
 			});
 
 			// Example #2
@@ -124,7 +127,7 @@
 	</ul>
 	<br />
 	<a id="addItem" class="go bold" href="#">Add a new item</a>
-	<h1>Collapse/Expand + store states in a Cookie</h1>
+	<h1>Collapse/Expand + store state in a Cookie</h1>
 	<ul class="collapse" id="collapse">
 		<li id="collapse1"><a class="expand" href="#"></a><span>Test 1</span></li>
 		<li id="collapse2"><a class="expand" href="#"></a><span>Test 2</span></li>

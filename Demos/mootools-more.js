@@ -1,21 +1,25 @@
-//MooTools More, <http://mootools.net/more>. Copyright (c) 2006-2009 Aaron Newton <http://clientcide.com/>, Valerio Proietti <http://mad4milk.net> & the MooTools team <http://mootools.net/developers>, MIT Style License.
-
 /*
 ---
 
 script: More.js
+
+name: More
 
 description: MooTools More
 
 license: MIT-style license
 
 authors:
-- Guillermo Rauch
-- Thomas Aylott
-- Scott Kyle
+  - Guillermo Rauch
+  - Thomas Aylott
+  - Scott Kyle
+  - Arian Stolwijk
+  - Tim Wienk
+  - Christoph Pojer
+  - Aaron Newton
 
 requires:
-- core:1.2.4/MooTools
+  - Core/MooTools
 
 provides: [MooTools.More]
 
@@ -23,139 +27,36 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	'version': '1.2.4.2',
-	'build': 'bd5a93c0913cce25917c48cbdacde568e15e02ef'
+	'version': '1.3.0.1dev',
+	'build': 'f10b8112c1b1b2d47e76dbafce3817ed45bc5ddd'
 };
 
-/*
----
-
-script: Element.Delegation.js
-
-description: Extends the Element native object to include the delegate method for more efficient event management.
-
-credits:
-- "Event checking based on the work of Daniel Steigerwald. License: MIT-style license.	Copyright: Copyright (c) 2008 Daniel Steigerwald, daniel.steigerwald.cz"
-
-license: MIT-style license
-
-authors:
-- Aaron Newton
-- Daniel Steigerwald
-
-requires:
-- core:1.2.4/Element.Event
-- core:1.2.4/Selectors
-- /MooTools.More
-
-provides: [Element.Delegation]
-
-...
-*/
-(function(){
-	
-	var match = /(.*?):relay\(([^)]+)\)$/,
-		combinators = /[+>~\s]/,
-		splitType = function(type){
-			var bits = type.match(match);
-			return !bits ? {event: type} : {
-				event: bits[1],
-				selector: bits[2]
-			};
-		},
-		check = function(e, selector){
-			var t = e.target;
-			if (combinators.test(selector = selector.trim())){
-				var els = this.getElements(selector);
-				for (var i = els.length; i--; ){
-					var el = els[i];
-					if (t == el || el.hasChild(t)) return el;
-				}
-			} else {
-				for ( ; t && t != this; t = t.parentNode){
-					if (Element.match(t, selector)) return document.id(t);
-				}
-			}
-			return null;
-		};
-
-	var oldAddEvent = Element.prototype.addEvent,
-		oldRemoveEvent = Element.prototype.removeEvent;
-		
-	Element.implement({
-
-		addEvent: function(type, fn){
-			var splitted = splitType(type);
-			if (splitted.selector){
-				var monitors = this.retrieve('$moo:delegateMonitors', {});
-				if (!monitors[type]){
-					var monitor = function(e){
-						var el = check.call(this, e, splitted.selector);
-						if (el) this.fireEvent(type, [e, el], 0, el);
-					}.bind(this);
-					monitors[type] = monitor;
-					oldAddEvent.call(this, splitted.event, monitor);
-				}
-			}
-			return oldAddEvent.apply(this, arguments);
-		},
-
-		removeEvent: function(type, fn){
-			var splitted = splitType(type);
-			if (splitted.selector){
-				var events = this.retrieve('events');
-				if (!events || !events[type] || (fn && !events[type].keys.contains(fn))) return this;
-
-				if (fn) oldRemoveEvent.apply(this, [type, fn]);
-				else oldRemoveEvent.apply(this, type);
-
-				events = this.retrieve('events');
-				if (events && events[type] && events[type].length == 0){
-					var monitors = this.retrieve('$moo:delegateMonitors', {});
-					oldRemoveEvent.apply(this, [splitted.event, monitors[type]]);
-					delete monitors[type];
-				}
-				return this;
-			}
-
-			return oldRemoveEvent.apply(this, arguments);
-		},
-
-		fireEvent: function(type, args, delay, bind){
-			var events = this.retrieve('events');
-			if (!events || !events[type]) return this;
-			events[type].keys.each(function(fn){
-				fn.create({bind: bind || this, delay: delay, arguments: args})();
-			}, this);
-			return this;
-		}
-
-	});
-
-})();
 
 /*
 ---
 
 script: Drag.js
 
+name: Drag
+
 description: The base Drag Class. Can be used to drag and resize Elements using mouse events.
 
 license: MIT-style license
 
 authors:
-- Valerio Proietti
-- Tom Occhinno
-- Jan Kassens
+  - Valerio Proietti
+  - Tom Occhinno
+  - Jan Kassens
 
 requires:
-- core:1.2.4/Events
-- core:1.2.4/Options
-- core:1.2.4/Element.Event
-- core:1.2.4/Element.Style
-- /MooTools.More
+  - Core/Events
+  - Core/Options
+  - Core/Element.Event
+  - Core/Element.Style
+  - /MooTools.More
 
 provides: [Drag]
+...
 
 */
 
@@ -164,12 +65,12 @@ var Drag = new Class({
 	Implements: [Events, Options],
 
 	options: {/*
-		onBeforeStart: $empty(thisElement),
-		onStart: $empty(thisElement, event),
-		onSnap: $empty(thisElement)
-		onDrag: $empty(thisElement, event),
-		onCancel: $empty(thisElement),
-		onComplete: $empty(thisElement, event),*/
+		onBeforeStart: function(thisElement){},
+		onStart: function(thisElement, event){},
+		onSnap: function(thisElement){},
+		onDrag: function(thisElement, event){},
+		onCancel: function(thisElement){},
+		onComplete: function(thisElement, event){},*/
 		snap: 6,
 		unit: 'px',
 		grid: false,
@@ -183,16 +84,28 @@ var Drag = new Class({
 	},
 
 	initialize: function(){
-		var params = Array.link(arguments, {'options': Object.type, 'element': $defined});
+		var params = Array.link(arguments, {
+			'options': Type.isObject,
+			'element': function(obj){
+				return obj != null;
+			}
+		});
+
 		this.element = document.id(params.element);
 		this.document = this.element.getDocument();
 		this.setOptions(params.options || {});
-		var htype = $type(this.options.handle);
+		var htype = typeOf(this.options.handle);
 		this.handles = ((htype == 'array' || htype == 'collection') ? $$(this.options.handle) : document.id(this.options.handle)) || this.element;
 		this.mouse = {'now': {}, 'pos': {}};
 		this.value = {'start': {}, 'now': {}};
 
-		this.selection = (Browser.Engine.trident) ? 'selectstart' : 'mousedown';
+		this.selection = (Browser.ie) ? 'selectstart' : 'mousedown';
+
+
+		if (Browser.ie && !Drag.ondragstartFixed){
+			document.ondragstart = Function.from(false);
+			Drag.ondragstartFixed = true;
+		}
 
 		this.bound = {
 			start: this.start.bind(this),
@@ -200,7 +113,7 @@ var Drag = new Class({
 			drag: this.drag.bind(this),
 			stop: this.stop.bind(this),
 			cancel: this.cancel.bind(this),
-			eventStop: $lambda(false)
+			eventStop: Function.from(false)
 		};
 		this.attach();
 	},
@@ -216,28 +129,56 @@ var Drag = new Class({
 	},
 
 	start: function(event){
+		var options = this.options;
+
 		if (event.rightClick) return;
-		if (this.options.preventDefault) event.preventDefault();
-		if (this.options.stopPropagation) event.stopPropagation();
+
+		if (options.preventDefault) event.preventDefault();
+		if (options.stopPropagation) event.stopPropagation();
 		this.mouse.start = event.page;
+
 		this.fireEvent('beforeStart', this.element);
-		var limit = this.options.limit;
+
+		var limit = options.limit;
 		this.limit = {x: [], y: []};
-		for (var z in this.options.modifiers){
-			if (!this.options.modifiers[z]) continue;
-			if (this.options.style) this.value.now[z] = this.element.getStyle(this.options.modifiers[z]).toInt();
-			else this.value.now[z] = this.element[this.options.modifiers[z]];
-			if (this.options.invert) this.value.now[z] *= -1;
+
+		var styles = this.element.getStyles('left', 'right', 'top', 'bottom');
+		this._invert = {
+			x: options.modifiers.x == 'left' && styles.left == 'auto' && !isNaN(styles.right.toInt()) && (options.modifiers.x = 'right'),
+			y: options.modifiers.y == 'top' && styles.top == 'auto' && !isNaN(styles.bottom.toInt()) && (options.modifiers.y = 'bottom')
+		};
+
+		for (var z in options.modifiers){
+			if (!options.modifiers[z]) continue;
+
+			if (options.style) this.value.now[z] = (this.element.getStyle(options.modifiers[z]) || 0).toInt();
+			else this.value.now[z] = this.element[options.modifiers[z]];
+
+			if (options.invert) this.value.now[z] *= -1;
+			if (this._invert[z]) this.value.now[z] *= -1;
+
 			this.mouse.pos[z] = event.page[z] - this.value.now[z];
+
 			if (limit && limit[z]){
-				for (var i = 2; i--; i){
-					if ($chk(limit[z][i])) this.limit[z][i] = $lambda(limit[z][i])();
+				var i = 2;
+				while (i--){
+					var limitZI = limit[z][i];
+					if (limitZI || limitZI === 0) this.limit[z][i] = (typeof limitZI == 'function') ? limitZI() : limitZI;
 				}
 			}
 		}
-		if ($type(this.options.grid) == 'number') this.options.grid = {x: this.options.grid, y: this.options.grid};
-		this.document.addEvents({mousemove: this.bound.check, mouseup: this.bound.cancel});
-		this.document.addEvent(this.selection, this.bound.eventStop);
+
+		if (typeOf(this.options.grid) == 'number') this.options.grid = {
+			x: this.options.grid,
+			y: this.options.grid
+		};
+
+		var events = {
+			mousemove: this.bound.check,
+			mouseup: this.bound.cancel
+		};
+		events[this.selection] = this.bound.eventStop;
+		this.document.addEvents(events);
 	},
 
 	check: function(event){
@@ -254,32 +195,40 @@ var Drag = new Class({
 	},
 
 	drag: function(event){
-		if (this.options.preventDefault) event.preventDefault();
+		var options = this.options;
+
+		if (options.preventDefault) event.preventDefault();
 		this.mouse.now = event.page;
-		for (var z in this.options.modifiers){
-			if (!this.options.modifiers[z]) continue;
+
+		for (var z in options.modifiers){
+			if (!options.modifiers[z]) continue;
 			this.value.now[z] = this.mouse.now[z] - this.mouse.pos[z];
-			if (this.options.invert) this.value.now[z] *= -1;
-			if (this.options.limit && this.limit[z]){
-				if ($chk(this.limit[z][1]) && (this.value.now[z] > this.limit[z][1])){
+
+			if (options.invert) this.value.now[z] *= -1;
+			if (this._invert[z]) this.value.now[z] *= -1;
+
+			if (options.limit && this.limit[z]){
+				if ((this.limit[z][1] || this.limit[z][1] === 0) && (this.value.now[z] > this.limit[z][1])){
 					this.value.now[z] = this.limit[z][1];
-				} else if ($chk(this.limit[z][0]) && (this.value.now[z] < this.limit[z][0])){
+				} else if ((this.limit[z][0] || this.limit[z][0] === 0) && (this.value.now[z] < this.limit[z][0])){
 					this.value.now[z] = this.limit[z][0];
 				}
 			}
-			if (this.options.grid[z]) this.value.now[z] -= ((this.value.now[z] - (this.limit[z][0]||0)) % this.options.grid[z]);
-			if (this.options.style) {
-				this.element.setStyle(this.options.modifiers[z], this.value.now[z] + this.options.unit);
-			} else {
-				this.element[this.options.modifiers[z]] = this.value.now[z];
-			}
+
+			if (options.grid[z]) this.value.now[z] -= ((this.value.now[z] - (this.limit[z][0]||0)) % options.grid[z]);
+
+			if (options.style) this.element.setStyle(options.modifiers[z], this.value.now[z] + options.unit);
+			else this.element[options.modifiers[z]] = this.value.now[z];
 		}
+
 		this.fireEvent('drag', [this.element, event]);
 	},
 
 	cancel: function(event){
-		this.document.removeEvent('mousemove', this.bound.check);
-		this.document.removeEvent('mouseup', this.bound.cancel);
+		this.document.removeEvents({
+			mousemove: this.bound.check,
+			mouseup: this.bound.cancel
+		});
 		if (event){
 			this.document.removeEvent(this.selection, this.bound.eventStop);
 			this.fireEvent('cancel', this.element);
@@ -287,9 +236,12 @@ var Drag = new Class({
 	},
 
 	stop: function(event){
-		this.document.removeEvent(this.selection, this.bound.eventStop);
-		this.document.removeEvent('mousemove', this.bound.drag);
-		this.document.removeEvent('mouseup', this.bound.stop);
+		var events = {
+			mousemove: this.bound.drag,
+			mouseup: this.bound.stop
+		};
+		events[this.selection] = this.bound.eventStop;
+		this.document.removeEvents(events);
 		if (event) this.fireEvent('complete', [this.element, event]);
 	}
 
@@ -298,7 +250,13 @@ var Drag = new Class({
 Element.implement({
 
 	makeResizable: function(options){
-		var drag = new Drag(this, $merge({modifiers: {x: 'width', y: 'height'}}, options));
+		var drag = new Drag(this, Object.merge({
+			modifiers: {
+				x: 'width',
+				y: 'height'
+			}
+		}, options));
+
 		this.store('resizer', drag);
 		return drag.addEvent('drag', function(){
 			this.fireEvent('resize', drag);
@@ -313,20 +271,22 @@ Element.implement({
 
 script: Drag.Move.js
 
+name: Drag.Move
+
 description: A Drag extension that provides support for the constraining of draggables to containers and droppables.
 
 license: MIT-style license
 
 authors:
-- Valerio Proietti
-- Tom Occhinno
-- Jan Kassens
-- Aaron Newton
-- Scott Kyle
+  - Valerio Proietti
+  - Tom Occhinno
+  - Jan Kassens
+  - Aaron Newton
+  - Scott Kyle
 
 requires:
-- core:1.2.4/Element.Dimensions
-- /Drag
+  - Core/Element.Dimensions
+  - /Drag
 
 provides: [Drag.Move]
 
@@ -338,9 +298,9 @@ Drag.Move = new Class({
 	Extends: Drag,
 
 	options: {/*
-		onEnter: $empty(thisElement, overed),
-		onLeave: $empty(thisElement, overed),
-		onDrop: $empty(thisElement, overed, event),*/
+		onEnter: function(thisElement, overed){},
+		onLeave: function(thisElement, overed){},
+		onDrop: function(thisElement, overed, event){},*/
 		droppables: [],
 		container: false,
 		precalculate: false,
@@ -351,56 +311,62 @@ Drag.Move = new Class({
 	initialize: function(element, options){
 		this.parent(element, options);
 		element = this.element;
-		
+
 		this.droppables = $$(this.options.droppables);
 		this.container = document.id(this.options.container);
-		
-		if (this.container && $type(this.container) != 'element')
+
+		if (this.container && typeOf(this.container) != 'element')
 			this.container = document.id(this.container.getDocument().body);
-		
-		var styles = element.getStyles('left', 'right', 'position');
-		if (styles.left == 'auto' || styles.top == 'auto')
-			element.setPosition(element.getPosition(element.getOffsetParent()));
-		
-		if (styles.position == 'static')
-			element.setStyle('position', 'absolute');
+
+		if (this.options.modifiers.x == "left" && this.options.modifiers.y == "top"){
+			var parentStyles,
+				parent = element.getOffsetParent();
+			var styles = element.getStyles('left', 'top');
+			if (parent && styles.left == 'auto' || styles.top == 'auto'){
+				element.setPosition(element.getPosition(parent));
+			}
+		}
+
+		if (element.getStyle('position') == 'static') element.setStyle('position', 'absolute');
 
 		this.addEvent('start', this.checkDroppables, true);
-
 		this.overed = null;
 	},
 
 	start: function(event){
 		if (this.container) this.options.limit = this.calculateLimit();
-		
+
 		if (this.options.precalculate){
 			this.positions = this.droppables.map(function(el){
 				return el.getCoordinates();
 			});
 		}
-		
+
 		this.parent(event);
 	},
-	
+
 	calculateLimit: function(){
-		var offsetParent = this.element.getOffsetParent(),
-			containerCoordinates = this.container.getCoordinates(offsetParent),
-			containerBorder = {},
+		var element = this.element,
+			container = this.container,
+
+			offsetParent = document.id(element.getOffsetParent()) || document.body,
+			containerCoordinates = container.getCoordinates(offsetParent),
 			elementMargin = {},
 			elementBorder = {},
 			containerMargin = {},
+			containerBorder = {},
 			offsetParentPadding = {};
 
 		['top', 'right', 'bottom', 'left'].each(function(pad){
-			containerBorder[pad] = this.container.getStyle('border-' + pad).toInt();
-			elementBorder[pad] = this.element.getStyle('border-' + pad).toInt();
-			elementMargin[pad] = this.element.getStyle('margin-' + pad).toInt();
-			containerMargin[pad] = this.container.getStyle('margin-' + pad).toInt();
+			elementMargin[pad] = element.getStyle('margin-' + pad).toInt();
+			elementBorder[pad] = element.getStyle('border-' + pad).toInt();
+			containerMargin[pad] = container.getStyle('margin-' + pad).toInt();
+			containerBorder[pad] = container.getStyle('border-' + pad).toInt();
 			offsetParentPadding[pad] = offsetParent.getStyle('padding-' + pad).toInt();
 		}, this);
 
-		var width = this.element.offsetWidth + elementMargin.left + elementMargin.right,
-			height = this.element.offsetHeight + elementMargin.top + elementMargin.bottom,
+		var width = element.offsetWidth + elementMargin.left + elementMargin.right,
+			height = element.offsetHeight + elementMargin.top + elementMargin.bottom,
 			left = 0,
 			top = 0,
 			right = containerCoordinates.right - containerBorder.right - width,
@@ -413,48 +379,47 @@ Drag.Move = new Class({
 			right += elementMargin.right;
 			bottom += elementMargin.bottom;
 		}
-		
-		if (this.element.getStyle('position') == 'relative'){
-			var coords = this.element.getCoordinates(offsetParent);
-			coords.left -= this.element.getStyle('left').toInt();
-			coords.top -= this.element.getStyle('top').toInt();
-			
-			left += containerBorder.left - coords.left;
-			top += containerBorder.top - coords.top;
+
+		if (element.getStyle('position') == 'relative'){
+			var coords = element.getCoordinates(offsetParent);
+			coords.left -= element.getStyle('left').toInt();
+			coords.top -= element.getStyle('top').toInt();
+
+			left -= coords.left;
+			top -= coords.top;
+			if (container.getStyle('position') != 'relative'){
+				left += containerBorder.left;
+				top += containerBorder.top;
+			}
 			right += elementMargin.left - coords.left;
 			bottom += elementMargin.top - coords.top;
-			
-			if (this.container != offsetParent){
+
+			if (container != offsetParent){
 				left += containerMargin.left + offsetParentPadding.left;
-				top += (Browser.Engine.trident4 ? 0 : containerMargin.top) + offsetParentPadding.top;
+				top += (Browser.ie6 ? 0 : containerMargin.top) + offsetParentPadding.top;
 			}
 		} else {
 			left -= elementMargin.left;
 			top -= elementMargin.top;
-			
-			if (this.container == offsetParent){
-				right -= containerBorder.left;
-				bottom -= containerBorder.top;
-			} else {
+			if (container != offsetParent){
 				left += containerCoordinates.left + containerBorder.left;
 				top += containerCoordinates.top + containerBorder.top;
 			}
 		}
-		
+
 		return {
 			x: [left, right],
 			y: [top, bottom]
 		};
 	},
 
-	checkAgainst: function(el, i){
-		el = (this.positions) ? this.positions[i] : el.getCoordinates();
-		var now = this.mouse.now;
-		return (now.x > el.left && now.x < el.right && now.y < el.bottom && now.y > el.top);
-	},
-
 	checkDroppables: function(){
-		var overed = this.droppables.filter(this.checkAgainst, this).getLast();
+		var overed = this.droppables.filter(function(el, i){
+			el = this.positions ? this.positions[i] : el.getCoordinates();
+			var now = this.mouse.now;
+			return (now.x > el.left && now.x < el.right && now.y < el.bottom && now.y > el.top);
+		}, this).getLast();
+
 		if (this.overed != overed){
 			if (this.overed) this.fireEvent('leave', [this.element, this.overed]);
 			if (overed) this.fireEvent('enter', [this.element, overed]);
@@ -485,3 +450,225 @@ Element.implement({
 	}
 
 });
+
+
+/*
+---
+
+name: Events.Pseudos
+
+description: Adds the functionallity to add pseudo events
+
+license: MIT-style license
+
+authors:
+  - Arian Stolwijk
+
+requires: [Core/Class.Extras, Core/Slick.Parser, More/MooTools.More]
+
+provides: [Events.Pseudos]
+
+...
+*/
+
+Events.Pseudos = function(pseudos, addEvent, removeEvent){
+
+	var storeKey = 'monitorEvents:';
+
+	var storageOf = function(object){
+
+		return {
+			store: object.store ? function(key, value){
+				object.store(storeKey + key, value);
+			} : function(key, value){
+				(object.$monitorEvents || (object.$monitorEvents = {}))[key] = value;
+			},
+			retrieve: object.retrieve ? function(key, dflt){
+				return object.retrieve(storeKey + key, dflt);
+			} : function(key, dflt){
+				if (!object.$monitorEvents) return dflt;
+				return object.$monitorEvents[key] || dflt;
+			}
+		};
+	};
+
+
+	var splitType = function(type){
+		if (type.indexOf(':') == -1) return null;
+
+		var parsed = Slick.parse(type).expressions[0][0],
+			parsedPseudos = parsed.pseudos;
+
+		return (pseudos && pseudos[parsedPseudos[0].key]) ? {
+			event: parsed.tag,
+			value: parsedPseudos[0].value,
+			pseudo: parsedPseudos[0].key,
+			original: type
+		} : null;
+	};
+
+
+	return {
+
+		addEvent: function(type, fn, internal){
+			var split = splitType(type);
+			if (!split) return addEvent.call(this, type, fn, internal);
+
+			var storage = storageOf(this),
+				events = storage.retrieve(type, []),
+				pseudoArgs = Array.from(pseudos[split.pseudo]),
+				proxy = pseudoArgs[1];
+
+			var self = this;
+			var monitor = function(){
+				pseudoArgs[0].call(self, split, fn, arguments, proxy);
+			};
+
+			events.include({event: fn, monitor: monitor});
+			storage.store(type, events);
+
+			var eventType = split.event;
+			if (proxy && proxy[eventType]) eventType = proxy[eventType].base;
+
+			addEvent.call(this, type, fn, internal);
+			return addEvent.call(this, eventType, monitor, internal);
+		},
+
+		removeEvent: function(type, fn){
+			var split = splitType(type);
+			if (!split) return removeEvent.call(this, type, fn);
+
+			var storage = storageOf(this),
+				events = storage.retrieve(type),
+				pseudoArgs = Array.from(pseudos[split.pseudo]),
+				proxy = pseudoArgs[1];
+
+			if (!events) return this;
+
+			var eventType = split.event;
+			if (proxy && proxy[eventType]) eventType = proxy[eventType].base;
+
+			removeEvent.call(this, type, fn);
+			events.each(function(monitor, i){
+				if (!fn || monitor.event == fn) removeEvent.call(this, eventType, monitor.monitor);
+				delete events[i];
+			}, this);
+
+			storage.store(type, events);
+			return this;
+		}
+
+	};
+
+};
+
+(function(){
+
+var pseudos = {
+
+	once: function(split, fn, args){
+		fn.apply(this, args);
+		this.removeEvent(split.original, fn);
+	}
+
+};
+
+Events.definePseudo = function(key, fn){
+	pseudos[key] = fn;
+};
+
+var proto = Events.prototype;
+Events.implement(Events.Pseudos(pseudos, proto.addEvent, proto.removeEvent));
+
+})();
+
+
+/*
+---
+
+name: Element.Event.Pseudos
+
+description: Adds the functionality to add pseudo events for Elements
+
+license: MIT-style license
+
+authors:
+  - Arian Stolwijk
+
+requires: [Core/Element.Event, Events.Pseudos]
+
+provides: [Element.Event.Pseudos]
+
+...
+*/
+
+(function(){
+
+var pseudos = {
+
+	once: function(split, fn, args){
+		fn.apply(this, args);
+		this.removeEvent(split.original, fn);
+	}
+
+};
+
+Event.definePseudo = function(key, fn, proxy){
+	pseudos[key] = [fn, proxy];
+};
+
+var proto = Element.prototype;
+[Element, Window, Document].invoke('implement', Events.Pseudos(pseudos, proto.addEvent, proto.removeEvent));
+
+})();
+
+
+/*
+---
+
+script: Element.Delegation.js
+
+name: Element.Delegation
+
+description: Extends the Element native object to include the delegate method for more efficient event management.
+
+credits:
+  - "Event checking based on the work of Daniel Steigerwald. License: MIT-style license. Copyright: Copyright (c) 2008 Daniel Steigerwald, daniel.steigerwald.cz"
+
+license: MIT-style license
+
+authors:
+  - Aaron Newton
+  - Daniel Steigerwald
+
+requires: [/MooTools.More, Element.Event.Pseudos]
+
+provides: [Element.Delegation]
+
+...
+*/
+
+
+Event.definePseudo('relay', function(split, fn, args, proxy){
+	var event = args[0];
+	var check = proxy ? proxy.condition : null;
+
+	for (var target = event.target; target && target != this; target = target.parentNode){
+		var finalTarget = document.id(target);
+		if (Slick.match(target, split.value) && (!check || check.call(finalTarget, event))){
+			if (finalTarget) fn.call(finalTarget, event, finalTarget);
+			return;
+		}
+	}
+
+}, {
+	mouseenter: {
+		base: 'mouseover',
+		condition: Element.Events.mouseenter.condition
+	},
+	mouseleave: {
+		base: 'mouseout',
+		condition: Element.Events.mouseleave.condition
+	}
+});
+
