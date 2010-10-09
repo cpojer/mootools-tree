@@ -3,7 +3,7 @@
 
 name: Collapse.Cookie
 
-description: Allows to expand or collapse a list or a tree.
+description: Automatically saves the collapsed/expanded state in a Cookie.
 
 authors: Christoph Pojer (@cpojer)
 

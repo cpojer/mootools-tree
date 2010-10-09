@@ -1,6 +1,6 @@
-name: "Tree Components"
+name: "Tree"
 
-exports: "mootools-tree-components.js"
+exports: "mootools-tree.js"
 
 web: "[cpojer.net](http://cpojer.net)"
 

@@ -1,50 +1,20 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
 <head>
-	<title>Testground</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<link rel="shortcut icon" href="http://cpojer.net/favicon.png" />
+	<title>Tree for MooTools</title>
+	<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+
 	<style type="text/css">
-	body {
-		font-size: 11px;
-		font-family: Tahoma, sans-serif;
+	body > div {
+		min-height: 900px;
 	}
-	
+
 	h1 {
-		margin: 10px 0;
-		padding: 0;
-		
-		color: #111;
-		font-weight: normal;
-		font-size: 24px;
-		letter-spacing: 1px;
-	}
-
-	h1 span {
-		font-size: 11px;
-		letter-spacing: 0;
-		word-spacing: 0;
-	}
-	
-	.blue { color: #1f52b0; }
-	
-	div.content {
-		min-height: 200px;
-		margin: 23px 34px;
-		padding: 5px 17px;
-		border: 1px solid #b2b2b2;
-		background: #fff;
-		-moz-box-shadow: rgba(0, 0, 0, 0.5) 0px 0px 2px;
+		margin: 20px 0;
+		font-size: 2em;
 	}
 	</style>
 
-	<style type="text/css">
-	div.content {
-		min-height: 1000px;
-	}
-	</style>
-	
 	<link rel="stylesheet" media="all" type="text/css" href="../Css/Tree.css" />
 	<link rel="stylesheet" media="all" type="text/css" href="../Css/Collapse.css" />
 
@@ -65,33 +35,39 @@
 					return !element.hasClass('nodrag');
 				},
 
-				checkDrop: function(element, options){
+				checkDrop: function(element){
 					return !element.hasClass('nodrop');
 				}
 				
 			});
 
-			var dispose = new Element('span', {'class': 'dispose', text: '(remove)'}).addEvents({
-				mousedown: function(e){
-					e.stop();
+			var dispose = new Element('span.dispose[text=(remove)]').addEvents({
+
+				mousedown: function(event){
+					event.preventDefault();
 				},
+
 				click: function(){
 					this.getParent('li').dispose();
 				}
+
 			});
 
-			$('tree').addEvents({
+			document.id('tree').addEvents({
+
 				'mouseover:relay(li)': function(){
 					this.getElement('span').adopt(dispose);
 				},
+
 				mouseleave: function(){
 					dispose.dispose();
 				}
+				
 			});
 
 			var i = 1;
-			$('addItem').addEvent('click', function(){
-				new Element('li').adopt(new Element('span', {text: 'New Item #' + (i++)})).inject('tree');
+			document.id('addItem').addEvent('click', function(){
+				new Element('li').adopt(new Element('span[text=New Item #' + (i++) + ']')).inject('tree');
 			});
 
 			// Example #2
@@ -104,7 +80,7 @@
 	</script>
 </head>
 <body>
-<div id="content" class="content">
+<div>
 	<h1>Draggable Tree Example</h1>
 	<ul class="tree" id="tree">
 		<li><span>Test 1</span></li>
@@ -125,8 +101,9 @@
 		<li class="nodrop"><span>Test 4 (You can't drop on me!)</span></li>
 		<li class="nodrag"><span>Test 5 (You can't drag me!)</span></li>
 	</ul>
-	<br />
+	
 	<a id="addItem" class="go bold" href="#">Add a new item</a>
+
 	<h1>Collapse/Expand + store state in a Cookie</h1>
 	<ul class="collapse" id="collapse">
 		<li id="collapse1"><a class="expand" href="#"></a><span>Test 1</span></li>
@@ -145,7 +122,6 @@
 			</ul>
 		</li>
 	</ul>
-
 
 	<h1>Draggable Tree + Collapse/Expand</h1>
 	<ul class="collapse tree" id="both">
