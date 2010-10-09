@@ -114,6 +114,7 @@ this.Tree = new Class({
 		if ([droppable, droppable.getParent('li')].contains(this.current)){
 			this.drop = {};
 		} else if (event.page.y >= center){
+			if (isSubnode) position.y -= coords.height;
 			drop = {
 				target: droppable,
 				where: 'after',
