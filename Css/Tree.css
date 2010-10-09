@@ -42,6 +42,7 @@ ul.tree li.nodrag span {
 }
 
 div.treeIndicator {
+	position: absolute;
 	width: 100px;
 	height: 1px;
 	background-color: #000;
