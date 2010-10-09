@@ -1,29 +1,18 @@
 /*
 ---
-description: Collapse
 
-authors:
-  - Christoph Pojer
+name: Collapse
 
-requires:
-  core/1.2.4: '*'
-  more/1.2.4: [Drag, Drag.Move, Element.Delegation]
+description: Allows to expand or collapse a list or a tree.
 
-provides:
-  - collapse
+authors: Christoph Pojer (@cpojer)
 
-license:
-  MIT-style license
+license: MIT-style license.
 
-version:
-  1.0
+requires: [Core/Events, Core/Element.Event, Core/Element.Style, Core/Element.Dimensions, Core/Fx, More/Element.Delegation, Class-Extras/Class.Binds]
 
-options:
-  - animate: (boolean, defaults to *true*) Whether to animate the expand/collapse elements or not
-  - fadeOpacity: (number, defaults to *0.5*) The opacity to be used for expand/collapse elements when they are not currently hovered
-  - selector: (string, defaults to *a.expand*) The selector to be used to determine the expand/collapse elements
-  - listSelector: (string, defaults to *li*) The element which contains elements determined by the *selector* and *childSelector* options
-  - childSelector: (string, defaults to *ul*) The selector for the elements that are to be collapsed and expanded
+provides: Collapse
+
 ...
 */
 
@@ -67,23 +56,6 @@ this.Collapse = new Class({
 		this.preparation = false;
 	},
 
-	updateElement: function(el){
-		var ul = el.getElement(this.options.childSelector),
-			icon = el.getElement(this.options.selector);
-
-		if (!this.hasChildren(el)){
-			if (!this.options.animate || this.preparation) icon.set('opacity', 0);
-			else icon.fade(0);
-			return;
-		}
-
-		if (this.options.animate) icon.fade(this.options.fadeOpacity);
-		else icon.set('opacity', this.options.fadeOpacity);
-		
-		if (this.isCollapsed(ul)) icon.removeClass('collapse');
-		else icon.addClass('collapse');
-	},
-
 	attach: function(){
 		var events = {};
 		events['click:relay(' + this.options.selector + ')'] = this.handler;
@@ -101,8 +73,25 @@ this.Collapse = new Class({
 		return this;
 	},
 
-	hasChildren: function(el){
-		var ul = el.getElement(this.options.childSelector);
+	updateElement: function(element){
+		var ul = element.getElement(this.options.childSelector),
+			icon = element.getElement(this.options.selector);
+
+		if (!this.hasChildren(element)){
+			if (!this.options.animate || this.preparation) icon.set('opacity', 0);
+			else icon.fade(0);
+			return;
+		}
+
+		if (this.options.animate) icon.fade(this.options.fadeOpacity);
+		else icon.set('opacity', this.options.fadeOpacity);
+
+		if (this.isCollapsed(ul)) icon.removeClass('collapse');
+		else icon.addClass('collapse');
+	},
+
+	hasChildren: function(element){
+		var ul = element.getElement(this.options.childSelector);
 		return ul && ul.getChildren().length;
 	},
 
@@ -110,8 +99,8 @@ this.Collapse = new Class({
 		return ul.getStyle('display') == 'none';
 	},
 
-	toggle: function(element, e){
-		if (e) e.stop();
+	toggle: function(element, event){
+		if (event) event.preventDefault();
 		
 		var li = element.match(this.options.listSelector) ? element : element.getParent(this.options.listSelector);
 

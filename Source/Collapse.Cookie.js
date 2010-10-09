@@ -1,28 +1,21 @@
 /*
 ---
-description: Collapse
 
-authors:
-  - Christoph Pojer
+name: Collapse.Cookie
 
-requires:
-  core/1.2.4: '*'
-  more/1.2.4: [Drag, Drag.Move, Element.Delegation]
+description: Allows to expand or collapse a list or a tree.
 
-provides:
-  - collapse.cookie
+authors: Christoph Pojer (@cpojer)
 
-license:
-  MIT-style license
+license: MIT-style license.
 
-version:
-  1.0
+requires: [Core/Cookie, Core/JSON, Collapse]
 
-options:
-  - getAttribute(element): (function) Returns the attribute to distinct between different elements, uses the id by default
-  - getIdentifier(element): (function) Returns the name for the cookie, uses the id and className by default
+provides: Collapse.Cookie
+
 ...
 */
+
 
 (function(){
 

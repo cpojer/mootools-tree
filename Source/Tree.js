@@ -1,36 +1,24 @@
 /*
 ---
-description: Tree
 
-authors:
-  - Christoph Pojer
+name: Tree
 
-requires:
-  core/1.2.4: '*'
-  more/1.2.4: [Drag, Drag.Move, Element.Delegation]
+description: Provides a way to sort and reorder a tree via drag&drop.
 
-provides:
-  - tree
+authors: Christoph Pojer (@cpojer)
 
-license:
-  MIT-style license
+license: MIT-style license.
 
-version:
-  1.0
+requires: [Core/Events, Core/Element.Event, Core/Element.Style, Core/Element.Dimensions, More/Drag.Move, More/Element.Delegation, Class-Extras/Class.Binds]
 
-options:
-  - indicatorOffset: (number, defaults to *0*) The offset of the indicator from the left
-  - cloneOffset: (string, defaults to *{x: 16, y: 16}*) The offset to be used for the cloned element
-  - cloneOpacity: (boolean, defaults to *0.8*) The opacity of the currently dragged element
-  - checkDrag(element): (function, returns boolean) Checks if the element that is to be dragged is draggable.
-  - checkDrop(droppable, dropOptions): (function, returns boolean) Checks if the droppable element can be dropped on
+provides: Tree
 
-events:
-  - onChange(): fires when the tree changes. Can be used in conjunction with the "serialize" method.
 ...
 */
 
-var Tree = new Class({
+(function(){
+
+this.Tree = new Class({
 
 	Implements: [Options, Events],
 
@@ -214,3 +202,5 @@ var Tree = new Class({
 	}
 
 });
+
+})();

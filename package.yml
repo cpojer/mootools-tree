@@ -1,5 +1,19 @@
-name: MooTools Tree Components
-author: cpojer
-category: Interface
-tags: [tree, expand, collapse, cookie]
-demo: http://cpojer.net/Scripts/TreeComponents/
+name: "Tree Components"
+
+exports: "mootools-tree-components.js"
+
+web: "[cpojer.net](http://cpojer.net)"
+
+description: "A set of components to sort and/or collapse/expand a tree."
+
+license: "[MIT License](http://mootools.net/license.txt)"
+
+copyright: "&copy; [Christoph Pojer](http://cpojer.net/)"
+
+author: "cpojer"
+authors: "[Christoph Pojer](http://cpojer.net)"
+
+sources:
+    - "Source/Tree.js"
+    - "Source/Collapse.js"
+    - "Source/Collapse.Cookie.js"
