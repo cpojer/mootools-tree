@@ -16,7 +16,6 @@ provides: Collapse.Cookie
 ...
 */
 
-
 (function(){
 
 this.Collapse.Cookie = new Class({
@@ -35,49 +34,47 @@ this.Collapse.Cookie = new Class({
 		
 	},
 
-	initialize: function(element, options){
-		this.setOptions(options);
-		this.cookie = this.options.getIdentifier.apply(this, [document.id(element)]);
-
-		this.parent(element);
+	setup: function(){
+		this.cookie = this.options.getIdentifier.call(this, this.element);
+		this.parent();
 	},
 
 	prepare: function(){
 		var obj = this.getCookieData();
-		this.element.getElements(this.options.listSelector).each(function(el){
-			if (!el.getElement(this.options.childSelector)) return;
+		this.element.getElements(this.options.listSelector).each(function(element){
+			if (!element.getElement(this.options.childSelector)) return;
 			
-			var state = obj[this.options.getAttribute.apply(this, [el])];
-			if (state == 1) this.expand(el);
-			else if (state == 0) this.collapse(el);
+			var state = obj[this.options.getAttribute.call(this, element)];
+			if (state == 1) this.expand(element);
+			else if (state == 0) this.collapse(element);
 		}, this);
 
-		this.parent();
+		return this.parent();
 	},
 
 	getCookieData: function(){
 		var self = this;
-
-		return $try(function(){
+		return Function.attempt(function(){
 			return JSON.decode(Cookie.read(self.cookie));
 		}) || {};
 	},
 
-	update: function(li, state){
+	update: function(element, state){
 		var obj = this.getCookieData();
-		obj[this.options.getAttribute.apply(this, [li])] = state;
+		obj[this.options.getAttribute.call(this, element)] = state;
 		Cookie.write(this.cookie, JSON.encode(obj), {duration: 30});
-	},
-
-	expand: function(li){
-		this.parent(li);
-		this.update(li, 1);
 		return this;
 	},
 
-	collapse: function(li){
-		this.parent(li);
-		this.update(li, 0);
+	expand: function(element){
+		this.parent(element);
+		this.update(element, 1);
+		return this;
+	},
+
+	collapse: function(element){
+		this.parent(element);
+		this.update(element, 0);
 		return this;
 	}
 
