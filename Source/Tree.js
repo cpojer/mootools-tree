@@ -97,7 +97,7 @@ this.Tree = new Class({
 		if (!event || !event.target) return;
 
 		var droppable = (event.target.get('tag') == 'li') ? event.target : event.target.getParent('li');
-		if (!droppable || !droppable.getParent('ul.tree')) return;
+		if (!droppable || this.element == droppable || !this.element.contains(droppable)) return;
 
 		if (this.collapse) this.expandCollapsed(droppable);
 
