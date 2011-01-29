@@ -102,19 +102,19 @@ this.Tree = new Class({
 		if (this.collapse) this.expandCollapsed(droppable);
 
 		var coords = droppable.getCoordinates(),
-			marginTop =  + droppable.getStyle('marginTop').toInt(),
+			marginTop =  droppable.getStyle('marginTop').toInt(),
 			center = coords.top + marginTop + (coords.height / 2),
 			isSubnode = (event.page.x > coords.left + this.padding),
 			position = {
 				x: coords.left + (isSubnode ? this.padding : 0),
-				y: coords.top + coords.height + marginTop + droppable.getStyle('marginBottom').toInt()
+				y: coords.top
 			};
 
 		var drop;
 		if ([droppable, droppable.getParent('li')].contains(this.current)){
 			this.drop = {};
 		} else if (event.page.y >= center){
-			if (isSubnode) position.y -= coords.height;
+			position.y += coords.height;
 			drop = {
 				target: droppable,
 				where: 'after',
@@ -123,7 +123,6 @@ this.Tree = new Class({
 			if (!this.options.checkDrop.call(this, droppable, drop)) return;
 			this.setDropTarget(drop);
 		} else if (event.page.y < center){
-			position.y -= coords.height;
 			position.x = coords.left;
 			drop = {
 				target: droppable,
