@@ -80,4 +80,4 @@ this.Collapse.Cookie = new Class({
 
 });
 
-})();
+}).call(this);

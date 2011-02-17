@@ -130,4 +130,4 @@ this.Collapse = new Class({
 
 });
 
-})();
+}).call(this);

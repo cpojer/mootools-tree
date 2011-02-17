@@ -199,4 +199,4 @@ this.Tree = new Class({
 
 });
 
-})();
+}).call(this);
