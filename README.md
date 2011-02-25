@@ -3,6 +3,8 @@ MooTools Tree
 
 Provides a way to sort and reorder a tree via drag&drop. Allows to expand or collapse a list or a tree. State can be saved in a Cookie.
 
+![Screenshot](http://cpojer.net/Logo/tree.png)
+
 This Plugin is part of MooTools [PowerTools!](http://cpojer.net/PowerTools).
 
 * [Build PowerTools!](http://cpojer.net/PowerTools)
