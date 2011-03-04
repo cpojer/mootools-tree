@@ -19,4 +19,6 @@ tags: [tree, collapse, cookie, sortable tree, sortable]
 sources:
     - "Source/Tree.js"
     - "Source/Collapse.js"
+    - "Source/Collapse.Persistent.js"
     - "Source/Collapse.Cookie.js"
+    - "Source/Collapse.LocalStorage.js"

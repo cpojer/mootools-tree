@@ -74,6 +74,10 @@ You can use both Tree and Collapse in conjunction. If you drag over a collapsed 
 * listSelector: (string, defaults to *li*) The element which contains elements determined by the *selector* and *childSelector* options
 * childSelector: (string, defaults to *ul*) Selector for the elements that are to be collapsed and expanded
 
+### Collapse.Persistent
+
+An interface to persist the state of collapse-able Tree. Extend this to use a new persistent storage. Included are Cookie and LocalStorage classes, but you can only need to extend and override `getState` and `setState` to use something else, such as `globalStorage`, `userData` for IE, or some cross-browser storage utility.
+
 ### Collapse.Cookie
 
 Create a new instance of Collapse.Cookie
