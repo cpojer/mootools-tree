@@ -3,7 +3,7 @@
 
 name: Collapse.Persistent
 
-description: Interface to automatically save the collapsed/expanded state to a persistent storage.
+description: Interface to automatically save the state to persistent storage.
 
 authors: [Christoph Pojer (@cpojer), Sean McArthur (@seanmonstar)]
 
