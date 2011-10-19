@@ -21,17 +21,18 @@
 	<script type="text/javascript" src="mootools-core.js"></script>
 	<script type="text/javascript" src="mootools-more.js"></script>
 	<script type="text/javascript" src="mootools-class-extras.js"></script>
-	
+
 	<script type="text/javascript" src="../Source/Tree.js"></script>
 	<script type="text/javascript" src="../Source/Collapse.js"></script>
 	<script type="text/javascript" src="../Source/Collapse.Persistent.js"></script>
+	<script type="text/javascript" src="../Source/Collapse.LocalStorage.js"></script>
 	<script type="text/javascript" src="../Source/Collapse.Cookie.js"></script>
-	
+
 	<script type="text/javascript">
 		window.addEvent('domready', function(){
 			// Example #1
 			new Tree('tree', {
-				
+
 				checkDrag: function(element){
 					return !element.hasClass('nodrag');
 				},
@@ -39,7 +40,7 @@
 				checkDrop: function(element){
 					return !element.hasClass('nodrop');
 				}
-				
+
 			});
 
 			var dispose = new Element('span.dispose[text=(remove)]').addEvents({
@@ -63,7 +64,7 @@
 				mouseleave: function(){
 					dispose.dispose();
 				}
-				
+
 			});
 
 			var i = 1;
@@ -102,7 +103,7 @@
 		<li class="nodrop"><span>Test 4 (You can't drop on me!)</span></li>
 		<li class="nodrag"><span>Test 5 (You can't drag me!)</span></li>
 	</ul>
-	
+
 	<a id="addItem" class="go bold" href="#">Add a new item</a>
 
 	<h1>Collapse/Expand + store state in a Cookie</h1>

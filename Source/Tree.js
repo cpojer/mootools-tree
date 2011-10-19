@@ -9,7 +9,7 @@ authors: Christoph Pojer (@cpojer)
 
 license: MIT-style license.
 
-requires: [Core/Events, Core/Element.Event, Core/Element.Style, Core/Element.Dimensions, Core/Fx.Tween, More/Drag.Move, More/Element.Delegation, Class-Extras/Class.Binds, Class-Extras/Class.Singleton]
+requires: [Core/Events, Core/Element.Event, Core/Element.Style, Core/Element.Dimensions, Core/Fx.Tween, Core/Element.Delegation, More/Drag.Move, Class-Extras/Class.Binds, Class-Extras/Class.Singleton]
 
 provides: Tree
 
@@ -39,12 +39,12 @@ this.Tree = new Class({
 
 	setup: function(){
 		this.indicator = new Element('div.treeIndicator');
-		
+
 		var self = this;
 		this.handler = function(e){
 			self.mousedown(this, e);
 		};
-		
+
 		this.attach();
 	},
 
@@ -152,7 +152,7 @@ this.Tree = new Class({
 			if (previous) this.collapse.updateElement(previous);
 			this.collapse.updateElement(drop.target);
 		}
-		
+
 		this.fireEvent('change');
 	},
 
@@ -188,7 +188,7 @@ this.Tree = new Class({
 		if (!fn) fn = function(el){
 			return el.get('id');
 		};
-		
+
 		var result = {};
 		base.getChildren('li').each(function(el){
 			var child = el.getElement('ul');
@@ -199,4 +199,4 @@ this.Tree = new Class({
 
 });
 
-}).call(this);
+})();

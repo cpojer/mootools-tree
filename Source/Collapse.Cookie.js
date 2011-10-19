@@ -30,11 +30,11 @@ this.Collapse.Cookie = new Class({
 	},
 
 	setState: function(element, state){
-		this.parent(element, state)
+		this.parent(element, state);
 		Cookie.write(this.key, JSON.encode(this.state), {duration: 30});
 		return this;
 	}
 
 });
 
-}).call(this);
+})();

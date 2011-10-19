@@ -47,11 +47,11 @@ this.Collapse = new Class({
 		this.mouseover = function(){
 			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(1);
 		};
-		
+
 		this.mouseout = function(){
 			if (self.hasChildren(this)) this.getElement(self.options.selector).fade(self.options.fadeOpacity);
 		};
-		
+
 		this.prepare().attach();
 	},
 
@@ -84,13 +84,13 @@ this.Collapse = new Class({
 			icon = element.getElement(this.options.selector);
 
 		if (!this.hasChildren(element)){
-			if (!this.options.animate || this.prepares) icon.set('opacity', 0);
+			if (!this.options.animate || this.prepares) icon.setStyle('opacity', 0);
 			else icon.fade(0);
 			return;
 		}
 
 		if (this.options.animate) icon.fade(this.options.fadeOpacity);
-		else icon.set('opacity', this.options.fadeOpacity);
+		else icon.setStyle('opacity', this.options.fadeOpacity);
 
 		if (this.isCollapsed(child)) icon.removeClass('collapse');
 		else icon.addClass('collapse');
@@ -107,9 +107,9 @@ this.Collapse = new Class({
 
 	toggle: function(element, event){
 		if (event) event.preventDefault();
-		
+
 		if (!element.match(this.options.listSelector)) element = element.getParent(this.options.listSelector);
-		
+
 		if (this.isCollapsed(element.getElement(this.options.childSelector))) this.expand(element);
 		else this.collapse(element);
 
@@ -130,4 +130,4 @@ this.Collapse = new Class({
 
 });
 
-}).call(this);
+})();

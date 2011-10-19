@@ -37,4 +37,4 @@ this.Collapse.LocalStorage = new Class({
 
 });
 
-}).call(this);
+})();

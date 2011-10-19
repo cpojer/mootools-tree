@@ -1,3 +1,4 @@
+
 /*
 ---
 
@@ -17,6 +18,7 @@ authors:
   - Tim Wienk
   - Christoph Pojer
   - Aaron Newton
+  - Jacob Thornton
 
 requires:
   - Core/MooTools
@@ -27,8 +29,8 @@ provides: [MooTools.More]
 */
 
 MooTools.More = {
-	'version': '1.3.0.1dev',
-	'build': 'f10b8112c1b1b2d47e76dbafce3817ed45bc5ddd'
+	'version': '1.4.0.1',
+	'build': 'a4244edf2aa97ac8a196fc96082dd35af1abab87'
 };
 
 
@@ -53,6 +55,7 @@ requires:
   - Core/Options
   - Core/Element.Event
   - Core/Element.Style
+  - Core/Element.Dimensions
   - /MooTools.More
 
 provides: [Drag]
@@ -142,20 +145,22 @@ var Drag = new Class({
 		var limit = options.limit;
 		this.limit = {x: [], y: []};
 
-		var styles = this.element.getStyles('left', 'right', 'top', 'bottom');
-		this._invert = {
-			x: options.modifiers.x == 'left' && styles.left == 'auto' && !isNaN(styles.right.toInt()) && (options.modifiers.x = 'right'),
-			y: options.modifiers.y == 'top' && styles.top == 'auto' && !isNaN(styles.bottom.toInt()) && (options.modifiers.y = 'bottom')
-		};
-
-		for (var z in options.modifiers){
+		var z, coordinates;
+		for (z in options.modifiers){
 			if (!options.modifiers[z]) continue;
 
-			if (options.style) this.value.now[z] = (this.element.getStyle(options.modifiers[z]) || 0).toInt();
+			var style = this.element.getStyle(options.modifiers[z]);
+
+			// Some browsers (IE and Opera) don't always return pixels.
+			if (style && !style.match(/px$/)){
+				if (!coordinates) coordinates = this.element.getCoordinates(this.element.getOffsetParent());
+				style = coordinates[options.modifiers[z]];
+			}
+
+			if (options.style) this.value.now[z] = (style || 0).toInt();
 			else this.value.now[z] = this.element[options.modifiers[z]];
 
 			if (options.invert) this.value.now[z] *= -1;
-			if (this._invert[z]) this.value.now[z] *= -1;
 
 			this.mouse.pos[z] = event.page[z] - this.value.now[z];
 
@@ -205,7 +210,6 @@ var Drag = new Class({
 			this.value.now[z] = this.mouse.now[z] - this.mouse.pos[z];
 
 			if (options.invert) this.value.now[z] *= -1;
-			if (this._invert[z]) this.value.now[z] *= -1;
 
 			if (options.limit && this.limit[z]){
 				if ((this.limit[z][1] || this.limit[z][1] === 0) && (this.value.now[z] > this.limit[z][1])){
@@ -318,16 +322,17 @@ Drag.Move = new Class({
 		if (this.container && typeOf(this.container) != 'element')
 			this.container = document.id(this.container.getDocument().body);
 
-		if (this.options.modifiers.x == "left" && this.options.modifiers.y == "top"){
-			var parentStyles,
-				parent = element.getOffsetParent();
-			var styles = element.getStyles('left', 'top');
-			if (parent && styles.left == 'auto' || styles.top == 'auto'){
-				element.setPosition(element.getPosition(parent));
+		if (this.options.style){
+			if (this.options.modifiers.x == 'left' && this.options.modifiers.y == 'top'){
+				var parent = element.getOffsetParent(),
+					styles = element.getStyles('left', 'top');
+				if (parent && (styles.left == 'auto' || styles.top == 'auto')){
+					element.setPosition(element.getPosition(parent));
+				}
 			}
-		}
 
-		if (element.getStyle('position') == 'static') element.setStyle('position', 'absolute');
+			if (element.getStyle('position') == 'static') element.setStyle('position', 'absolute');
+		}
 
 		this.addEvent('start', this.checkDroppables, true);
 		this.overed = null;
@@ -396,7 +401,7 @@ Drag.Move = new Class({
 
 			if (container != offsetParent){
 				left += containerMargin.left + offsetParentPadding.left;
-				top += (Browser.ie6 ? 0 : containerMargin.top) + offsetParentPadding.top;
+				top += ((Browser.ie6 || Browser.ie7) ? 0 : containerMargin.top) + offsetParentPadding.top;
 			}
 		} else {
 			left -= elementMargin.left;
@@ -413,9 +418,21 @@ Drag.Move = new Class({
 		};
 	},
 
+	getDroppableCoordinates: function(element){
+		var position = element.getCoordinates();
+		if (element.getStyle('position') == 'fixed'){
+			var scroll = window.getScroll();
+			position.left += scroll.x;
+			position.right += scroll.x;
+			position.top += scroll.y;
+			position.bottom += scroll.y;
+		}
+		return position;
+	},
+
 	checkDroppables: function(){
 		var overed = this.droppables.filter(function(el, i){
-			el = this.positions ? this.positions[i] : el.getCoordinates();
+			el = this.positions ? this.positions[i] : this.getDroppableCoordinates(el);
 			var now = this.mouse.now;
 			return (now.x > el.left && now.x < el.right && now.y < el.bottom && now.y > el.top);
 		}, this).getLast();
@@ -450,225 +467,3 @@ Element.implement({
 	}
 
 });
-
-
-/*
----
-
-name: Events.Pseudos
-
-description: Adds the functionallity to add pseudo events
-
-license: MIT-style license
-
-authors:
-  - Arian Stolwijk
-
-requires: [Core/Class.Extras, Core/Slick.Parser, More/MooTools.More]
-
-provides: [Events.Pseudos]
-
-...
-*/
-
-Events.Pseudos = function(pseudos, addEvent, removeEvent){
-
-	var storeKey = 'monitorEvents:';
-
-	var storageOf = function(object){
-
-		return {
-			store: object.store ? function(key, value){
-				object.store(storeKey + key, value);
-			} : function(key, value){
-				(object.$monitorEvents || (object.$monitorEvents = {}))[key] = value;
-			},
-			retrieve: object.retrieve ? function(key, dflt){
-				return object.retrieve(storeKey + key, dflt);
-			} : function(key, dflt){
-				if (!object.$monitorEvents) return dflt;
-				return object.$monitorEvents[key] || dflt;
-			}
-		};
-	};
-
-
-	var splitType = function(type){
-		if (type.indexOf(':') == -1) return null;
-
-		var parsed = Slick.parse(type).expressions[0][0],
-			parsedPseudos = parsed.pseudos;
-
-		return (pseudos && pseudos[parsedPseudos[0].key]) ? {
-			event: parsed.tag,
-			value: parsedPseudos[0].value,
-			pseudo: parsedPseudos[0].key,
-			original: type
-		} : null;
-	};
-
-
-	return {
-
-		addEvent: function(type, fn, internal){
-			var split = splitType(type);
-			if (!split) return addEvent.call(this, type, fn, internal);
-
-			var storage = storageOf(this),
-				events = storage.retrieve(type, []),
-				pseudoArgs = Array.from(pseudos[split.pseudo]),
-				proxy = pseudoArgs[1];
-
-			var self = this;
-			var monitor = function(){
-				pseudoArgs[0].call(self, split, fn, arguments, proxy);
-			};
-
-			events.include({event: fn, monitor: monitor});
-			storage.store(type, events);
-
-			var eventType = split.event;
-			if (proxy && proxy[eventType]) eventType = proxy[eventType].base;
-
-			addEvent.call(this, type, fn, internal);
-			return addEvent.call(this, eventType, monitor, internal);
-		},
-
-		removeEvent: function(type, fn){
-			var split = splitType(type);
-			if (!split) return removeEvent.call(this, type, fn);
-
-			var storage = storageOf(this),
-				events = storage.retrieve(type),
-				pseudoArgs = Array.from(pseudos[split.pseudo]),
-				proxy = pseudoArgs[1];
-
-			if (!events) return this;
-
-			var eventType = split.event;
-			if (proxy && proxy[eventType]) eventType = proxy[eventType].base;
-
-			removeEvent.call(this, type, fn);
-			events.each(function(monitor, i){
-				if (!fn || monitor.event == fn) removeEvent.call(this, eventType, monitor.monitor);
-				delete events[i];
-			}, this);
-
-			storage.store(type, events);
-			return this;
-		}
-
-	};
-
-};
-
-(function(){
-
-var pseudos = {
-
-	once: function(split, fn, args){
-		fn.apply(this, args);
-		this.removeEvent(split.original, fn);
-	}
-
-};
-
-Events.definePseudo = function(key, fn){
-	pseudos[key] = fn;
-};
-
-var proto = Events.prototype;
-Events.implement(Events.Pseudos(pseudos, proto.addEvent, proto.removeEvent));
-
-})();
-
-
-/*
----
-
-name: Element.Event.Pseudos
-
-description: Adds the functionality to add pseudo events for Elements
-
-license: MIT-style license
-
-authors:
-  - Arian Stolwijk
-
-requires: [Core/Element.Event, Events.Pseudos]
-
-provides: [Element.Event.Pseudos]
-
-...
-*/
-
-(function(){
-
-var pseudos = {
-
-	once: function(split, fn, args){
-		fn.apply(this, args);
-		this.removeEvent(split.original, fn);
-	}
-
-};
-
-Event.definePseudo = function(key, fn, proxy){
-	pseudos[key] = [fn, proxy];
-};
-
-var proto = Element.prototype;
-[Element, Window, Document].invoke('implement', Events.Pseudos(pseudos, proto.addEvent, proto.removeEvent));
-
-})();
-
-
-/*
----
-
-script: Element.Delegation.js
-
-name: Element.Delegation
-
-description: Extends the Element native object to include the delegate method for more efficient event management.
-
-credits:
-  - "Event checking based on the work of Daniel Steigerwald. License: MIT-style license. Copyright: Copyright (c) 2008 Daniel Steigerwald, daniel.steigerwald.cz"
-
-license: MIT-style license
-
-authors:
-  - Aaron Newton
-  - Daniel Steigerwald
-
-requires: [/MooTools.More, Element.Event.Pseudos]
-
-provides: [Element.Delegation]
-
-...
-*/
-
-
-Event.definePseudo('relay', function(split, fn, args, proxy){
-	var event = args[0];
-	var check = proxy ? proxy.condition : null;
-
-	for (var target = event.target; target && target != this; target = target.parentNode){
-		var finalTarget = document.id(target);
-		if (Slick.match(target, split.value) && (!check || check.call(finalTarget, event))){
-			if (finalTarget) fn.call(finalTarget, event, finalTarget);
-			return;
-		}
-	}
-
-}, {
-	mouseenter: {
-		base: 'mouseover',
-		condition: Element.Events.mouseenter.condition
-	},
-	mouseleave: {
-		base: 'mouseout',
-		condition: Element.Events.mouseleave.condition
-	}
-});
-

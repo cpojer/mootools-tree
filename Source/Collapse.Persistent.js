@@ -31,7 +31,7 @@ this.Collapse.Persistent = new Class({
 		getIdentifier: function(element){
 			return 'collapse_' + element.get('id') + '_' + element.get('class').split(' ').join('_');
 		}
-		
+
 	},
 
 	setup: function(){
@@ -44,7 +44,7 @@ this.Collapse.Persistent = new Class({
 		var obj = this.state;
 		this.element.getElements(this.options.listSelector).each(function(element){
 			if (!element.getElement(this.options.childSelector)) return;
-			
+
 			var state = obj[this.options.getAttribute.call(this, element)];
 			if (state == 1) this.expand(element);
 			else if (state == 0) this.collapse(element);
@@ -76,4 +76,4 @@ this.Collapse.Persistent = new Class({
 
 });
 
-}).call(this);
+})();

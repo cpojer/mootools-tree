@@ -23,8 +23,8 @@ provides: [Core, MooTools, Type, typeOf, instanceOf, Native]
 (function(){
 
 this.MooTools = {
-	version: '1.3dev',
-	build: 'a3eed692dd85050d80168ec2c708efe901bb7db3'
+	version: '1.4.2dev',
+	build: 'f0205e5003b1a53c71151843bb62e3dd0ed85a9f'
 };
 
 // typeOf, instanceOf
@@ -157,7 +157,7 @@ var Type = this.Type = function(name, object){
 			object.prototype.$family = (function(){
 				return lower;
 			}).hide();
-			
+
 		}
 	}
 
@@ -184,7 +184,7 @@ var hooksOf = function(object){
 };
 
 var implement = function(name, method){
-	if (method && method.$hidden) return this;
+	if (method && method.$hidden) return;
 
 	var hooks = hooksOf(this);
 
@@ -193,22 +193,19 @@ var implement = function(name, method){
 		if (typeOf(hook) == 'type') implement.call(hook, name, method);
 		else hook.call(this, name, method);
 	}
-	
+
 	var previous = this.prototype[name];
 	if (previous == null || !previous.$protected) this.prototype[name] = method;
 
 	if (this[name] == null && typeOf(method) == 'function') extend.call(this, name, function(item){
 		return method.apply(item, slice.call(arguments, 1));
 	});
-
-	return this;
 };
 
 var extend = function(name, method){
-	if (method && method.$hidden) return this;
+	if (method && method.$hidden) return;
 	var previous = this[name];
 	if (previous == null || !previous.$protected) this[name] = method;
-	return this;
 };
 
 Type.implement({
@@ -258,7 +255,7 @@ var force = function(name, object, methods){
 
 force('String', String, [
 	'charAt', 'charCodeAt', 'concat', 'indexOf', 'lastIndexOf', 'match', 'quote', 'replace', 'search',
-	'slice', 'split', 'substr', 'substring', 'toLowerCase', 'toUpperCase'
+	'slice', 'split', 'substr', 'substring', 'trim', 'toLowerCase', 'toUpperCase'
 ])('Array', Array, [
 	'pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'concat', 'join', 'slice',
 	'indexOf', 'lastIndexOf', 'filter', 'forEach', 'every', 'map', 'some', 'reduce', 'reduceRight'
@@ -296,9 +293,10 @@ Number.extend('random', function(min, max){
 
 // forEach, each
 
+var hasOwnProperty = Object.prototype.hasOwnProperty;
 Object.extend('forEach', function(object, fn, bind){
 	for (var key in object){
-		if (object.hasOwnProperty(key)) fn.call(bind, object[key], key, object);
+		if (hasOwnProperty.call(object, key)) fn.call(bind, object[key], key, object);
 	}
 });
 
@@ -411,15 +409,9 @@ provides: Array
 
 Array.implement({
 
-	invoke: function(methodName){
-		var args = Array.slice(arguments, 1);
-		return this.map(function(item){
-			return item[methodName].apply(item, args);
-		});
-	},
-
+	/*<!ES5>*/
 	every: function(fn, bind){
-		for (var i = 0, l = this.length; i < l; i++){
+		for (var i = 0, l = this.length >>> 0; i < l; i++){
 			if ((i in this) && !fn.call(bind, this[i], i, this)) return false;
 		}
 		return true;
@@ -427,11 +419,35 @@ Array.implement({
 
 	filter: function(fn, bind){
 		var results = [];
-		for (var i = 0, l = this.length; i < l; i++){
+		for (var i = 0, l = this.length >>> 0; i < l; i++){
 			if ((i in this) && fn.call(bind, this[i], i, this)) results.push(this[i]);
 		}
 		return results;
 	},
+
+	indexOf: function(item, from){
+		var length = this.length >>> 0;
+		for (var i = (from < 0) ? Math.max(0, length + from) : from || 0; i < length; i++){
+			if (this[i] === item) return i;
+		}
+		return -1;
+	},
+
+	map: function(fn, bind){
+		var length = this.length >>> 0, results = Array(length);
+		for (var i = 0; i < length; i++){
+			if (i in this) results[i] = fn.call(bind, this[i], i, this);
+		}
+		return results;
+	},
+
+	some: function(fn, bind){
+		for (var i = 0, l = this.length >>> 0; i < l; i++){
+			if ((i in this) && fn.call(bind, this[i], i, this)) return true;
+		}
+		return false;
+	},
+	/*</!ES5>*/
 
 	clean: function(){
 		return this.filter(function(item){
@@ -439,27 +455,11 @@ Array.implement({
 		});
 	},
 
-	indexOf: function(item, from){
-		var len = this.length;
-		for (var i = (from < 0) ? Math.max(0, len + from) : from || 0; i < len; i++){
-			if (this[i] === item) return i;
-		}
-		return -1;
-	},
-
-	map: function(fn, bind){
-		var results = [];
-		for (var i = 0, l = this.length; i < l; i++){
-			if (i in this) results[i] = fn.call(bind, this[i], i, this);
-		}
-		return results;
-	},
-
-	some: function(fn, bind){
-		for (var i = 0, l = this.length; i < l; i++){
-			if ((i in this) && fn.call(bind, this[i], i, this)) return true;
-		}
-		return false;
+	invoke: function(methodName){
+		var args = Array.slice(arguments, 1);
+		return this.map(function(item){
+			return item[methodName].apply(item, args);
+		});
 	},
 
 	associate: function(keys){
@@ -586,37 +586,37 @@ String.implement({
 	},
 
 	contains: function(string, separator){
-		return (separator) ? (separator + this + separator).indexOf(separator + string + separator) > -1 : this.indexOf(string) > -1;
+		return (separator) ? (separator + this + separator).indexOf(separator + string + separator) > -1 : String(this).indexOf(string) > -1;
 	},
 
 	trim: function(){
-		return this.replace(/^\s+|\s+$/g, '');
+		return String(this).replace(/^\s+|\s+$/g, '');
 	},
 
 	clean: function(){
-		return this.replace(/\s+/g, ' ').trim();
+		return String(this).replace(/\s+/g, ' ').trim();
 	},
 
 	camelCase: function(){
-		return this.replace(/-\D/g, function(match){
+		return String(this).replace(/-\D/g, function(match){
 			return match.charAt(1).toUpperCase();
 		});
 	},
 
 	hyphenate: function(){
-		return this.replace(/[A-Z]/g, function(match){
+		return String(this).replace(/[A-Z]/g, function(match){
 			return ('-' + match.charAt(0).toLowerCase());
 		});
 	},
 
 	capitalize: function(){
-		return this.replace(/\b[a-z]/g, function(match){
+		return String(this).replace(/\b[a-z]/g, function(match){
 			return match.toUpperCase();
 		});
 	},
 
 	escapeRegExp: function(){
-		return this.replace(/([-.*+?^${}()|[\]\/\\])/g, '\\$1');
+		return String(this).replace(/([-.*+?^${}()|[\]\/\\])/g, '\\$1');
 	},
 
 	toInt: function(base){
@@ -628,23 +628,104 @@ String.implement({
 	},
 
 	hexToRgb: function(array){
-		var hex = this.match(/^#?(\w{1,2})(\w{1,2})(\w{1,2})$/);
+		var hex = String(this).match(/^#?(\w{1,2})(\w{1,2})(\w{1,2})$/);
 		return (hex) ? hex.slice(1).hexToRgb(array) : null;
 	},
 
 	rgbToHex: function(array){
-		var rgb = this.match(/\d{1,3}/g);
+		var rgb = String(this).match(/\d{1,3}/g);
 		return (rgb) ? rgb.rgbToHex(array) : null;
 	},
 
 	substitute: function(object, regexp){
-		return this.replace(regexp || (/\\?\{([^{}]+)\}/g), function(match, name){
+		return String(this).replace(regexp || (/\\?\{([^{}]+)\}/g), function(match, name){
 			if (match.charAt(0) == '\\') return match.slice(1);
 			return (object[name] != null) ? object[name] : '';
 		});
 	}
 
 });
+
+
+/*
+---
+
+name: Function
+
+description: Contains Function Prototypes like create, bind, pass, and delay.
+
+license: MIT-style license.
+
+requires: Type
+
+provides: Function
+
+...
+*/
+
+Function.extend({
+
+	attempt: function(){
+		for (var i = 0, l = arguments.length; i < l; i++){
+			try {
+				return arguments[i]();
+			} catch (e){}
+		}
+		return null;
+	}
+
+});
+
+Function.implement({
+
+	attempt: function(args, bind){
+		try {
+			return this.apply(bind, Array.from(args));
+		} catch (e){}
+
+		return null;
+	},
+
+	/*<!ES5-bind>*/
+	bind: function(that){
+		var self = this,
+			args = arguments.length > 1 ? Array.slice(arguments, 1) : null,
+			F = function(){};
+
+		var bound = function(){
+			var context = that, length = arguments.length;
+			if (this instanceof bound){
+				F.prototype = self.prototype;
+				context = new F;
+			}
+			var result = (!args && !length)
+				? self.call(context)
+				: self.apply(context, args && length ? args.concat(Array.slice(arguments)) : args || arguments);
+			return context == that ? result : context;
+		};
+		return bound;
+	},
+	/*</!ES5-bind>*/
+
+	pass: function(args, bind){
+		var self = this;
+		if (args != null) args = Array.from(args);
+		return function(){
+			return self.apply(bind, args || arguments);
+		};
+	},
+
+	delay: function(delay, bind, args){
+		return setTimeout(this.pass((args == null ? [] : args), bind), delay);
+	},
+
+	periodical: function(periodical, bind, args){
+		return setInterval(this.pass((args == null ? [] : args), bind), periodical);
+	}
+
+});
+
+
 
 
 /*
@@ -699,531 +780,6 @@ Number.alias('each', 'times');
 	});
 	Number.implement(methods);
 })(['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos', 'exp', 'floor', 'log', 'max', 'min', 'pow', 'sin', 'sqrt', 'tan']);
-
-
-/*
----
-
-name: Function
-
-description: Contains Function Prototypes like create, bind, pass, and delay.
-
-license: MIT-style license.
-
-requires: Type
-
-provides: Function
-
-...
-*/
-
-Function.extend({
-
-	attempt: function(){
-		for (var i = 0, l = arguments.length; i < l; i++){
-			try {
-				return arguments[i]();
-			} catch (e){}
-		}
-		return null;
-	}
-
-});
-
-Function.implement({
-
-	attempt: function(args, bind){
-		try {
-			return this.apply(bind, Array.from(args));
-		} catch (e){}
-		
-		return null;
-	},
-
-	bind: function(bind){
-		var self = this,
-			args = (arguments.length > 1) ? Array.slice(arguments, 1) : null;
-		
-		return function(){
-			if (!args && !arguments.length) return self.call(bind);
-			if (args && arguments.length) return self.apply(bind, args.concat(Array.from(arguments)));
-			return self.apply(bind, args || arguments);
-		};
-	},
-
-	pass: function(args, bind){
-		var self = this;
-		if (args != null) args = Array.from(args);
-		return function(){
-			return self.apply(bind, args || arguments);
-		};
-	},
-
-	delay: function(delay, bind, args){
-		return setTimeout(this.pass(args, bind), delay);
-	},
-
-	periodical: function(periodical, bind, args){
-		return setInterval(this.pass(args, bind), periodical);
-	}
-
-});
-
-
-
-
-/*
----
-
-name: Object
-
-description: Object generic methods
-
-license: MIT-style license.
-
-requires: Type
-
-provides: [Object, Hash]
-
-...
-*/
-
-
-Object.extend({
-
-	subset: function(object, keys){
-		var results = {};
-		for (var i = 0, l = keys.length; i < l; i++){
-			var k = keys[i];
-			results[k] = object[k];
-		}
-		return results;
-	},
-
-	map: function(object, fn, bind){
-		var results = {};
-		for (var key in object){
-			if (object.hasOwnProperty(key)) results[key] = fn.call(bind, object[key], key, object);
-		}
-		return results;
-	},
-
-	filter: function(object, fn, bind){
-		var results = {};
-		Object.each(object, function(value, key){
-			if (fn.call(bind, value, key, object)) results[key] = value;
-		});
-		return results;
-	},
-
-	every: function(object, fn, bind){
-		for (var key in object){
-			if (object.hasOwnProperty(key) && !fn.call(bind, object[key], key)) return false;
-		}
-		return true;
-	},
-
-	some: function(object, fn, bind){
-		for (var key in object){
-			if (object.hasOwnProperty(key) && fn.call(bind, object[key], key)) return true;
-		}
-		return false;
-	},
-
-	keys: function(object){
-		var keys = [];
-		for (var key in object){
-			if (object.hasOwnProperty(key)) keys.push(key);
-		}
-		return keys;
-	},
-
-	values: function(object){
-		var values = [];
-		for (var key in object){
-			if (object.hasOwnProperty(key)) values.push(object[key]);
-		}
-		return values;
-	},
-
-	getLength: function(object){
-		return Object.keys(object).length;
-	},
-
-	keyOf: function(object, value){
-		for (var key in object){
-			if (object.hasOwnProperty(key) && object[key] === value) return key;
-		}
-		return null;
-	},
-
-	contains: function(object, value){
-		return Object.keyOf(object, value) != null;
-	},
-
-	toQueryString: function(object, base){
-		var queryString = [];
-
-		Object.each(object, function(value, key){
-			if (base) key = base + '[' + key + ']';
-			var result;
-			switch (typeOf(value)){
-				case 'object': result = Object.toQueryString(value, key); break;
-				case 'array':
-					var qs = {};
-					value.each(function(val, i){
-						qs[i] = val;
-					});
-					result = Object.toQueryString(qs, key);
-				break;
-				default: result = key + '=' + encodeURIComponent(value);
-			}
-			if (value != null) queryString.push(result);
-		});
-
-		return queryString.join('&');
-	}
-
-});
-
-
-
-
-
-/*
----
-
-name: Browser
-
-description: The Browser Object. Contains Browser initialization, Window and Document, and the Browser Hash.
-
-license: MIT-style license.
-
-requires: [Array, Function, Number, String]
-
-provides: [Browser, Window, Document]
-
-...
-*/
-
-(function(){
-
-var document = this.document;
-var window = document.window = this;
-
-var UID = 1;
-
-this.$uid = (window.ActiveXObject) ? function(item){
-	return (item.uid || (item.uid = [UID++]))[0];
-} : function(item){
-	return item.uid || (item.uid = UID++);
-};
-
-$uid(window);
-$uid(document);
-
-var ua = navigator.userAgent.toLowerCase(),
-	platform = navigator.platform.toLowerCase(),
-	UA = ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/) || [null, 'unknown', 0],
-	mode = UA[1] == 'ie' && document.documentMode;
-
-var Browser = this.Browser = {
-
-	extend: Function.prototype.extend,
-
-	name: (UA[1] == 'version') ? UA[3] : UA[1],
-
-	version: mode || parseFloat((UA[1] == 'opera' && UA[4]) ? UA[4] : UA[2]),
-
-	Platform: {
-		name: ua.match(/ip(?:ad|od|hone)/) ? 'ios' : (ua.match(/(?:webos|android)/) || platform.match(/mac|win|linux/) || ['other'])[0]
-	},
-
-	Features: {
-		xpath: !!(document.evaluate),
-		air: !!(window.runtime),
-		query: !!(document.querySelector),
-		json: !!(window.JSON)
-	},
-
-	Plugins: {}
-
-};
-
-Browser[Browser.name] = true;
-Browser[Browser.name + parseInt(Browser.version, 10)] = true;
-Browser.Platform[Browser.Platform.name] = true;
-
-// Request
-
-Browser.Request = (function(){
-
-	var XMLHTTP = function(){
-		return new XMLHttpRequest();
-	};
-
-	var MSXML2 = function(){
-		return new ActiveXObject('MSXML2.XMLHTTP');
-	};
-
-	var MSXML = function(){
-		return new ActiveXObject('Microsoft.XMLHTTP');
-	};
-
-	return Function.attempt(function(){
-		XMLHTTP();
-		return XMLHTTP;
-	}, function(){
-		MSXML2();
-		return MSXML2;
-	}, function(){
-		MSXML();
-		return MSXML;
-	});
-
-})();
-
-Browser.Features.xhr = !!(Browser.Request);
-
-// Flash detection
-
-var version = (Function.attempt(function(){
-	return navigator.plugins['Shockwave Flash'].description;
-}, function(){
-	return new ActiveXObject('ShockwaveFlash.ShockwaveFlash').GetVariable('$version');
-}) || '0 r0').match(/\d+/g);
-
-Browser.Plugins.Flash = {
-	version: Number(version[0] || '0.' + version[1]) || 0,
-	build: Number(version[2]) || 0
-};
-
-// String scripts
-
-Browser.exec = function(text){
-	if (!text) return text;
-	if (window.execScript){
-		window.execScript(text);
-	} else {
-		var script = document.createElement('script');
-		script.setAttribute('type', 'text/javascript');
-		script.text = text;
-		document.head.appendChild(script);
-		document.head.removeChild(script);
-	}
-	return text;
-};
-
-String.implement('stripScripts', function(exec){
-	var scripts = '';
-	var text = this.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, function(all, code){
-		scripts += code + '\n';
-		return '';
-	});
-	if (exec === true) Browser.exec(scripts);
-	else if (typeOf(exec) == 'function') exec(scripts, text);
-	return text;
-});
-
-// Window, Document
-
-Browser.extend({
-	Document: this.Document,
-	Window: this.Window,
-	Element: this.Element,
-	Event: this.Event
-});
-
-this.Window = this.$constructor = new Type('Window', function(){});
-
-this.$family = Function.from('window').hide();
-
-Window.mirror(function(name, method){
-	window[name] = method;
-});
-
-this.Document = document.$constructor = new Type('Document', function(){});
-
-document.$family = Function.from('document').hide();
-
-Document.mirror(function(name, method){
-	document[name] = method;
-});
-
-document.html = document.documentElement;
-document.head = document.getElementsByTagName('head')[0];
-
-if (document.execCommand) try {
-	document.execCommand("BackgroundImageCache", false, true);
-} catch (e){}
-
-if (this.attachEvent && !this.addEventListener){
-	var unloadEvent = function(){
-		this.detachEvent('onunload', unloadEvent);
-		document.head = document.html = document.window = null;
-	};
-	this.attachEvent('onunload', unloadEvent);
-}
-
-// IE fails on collections and <select>.options (refers to <select>)
-var arrayFrom = Array.from;
-try {
-	arrayFrom(document.html.childNodes);
-} catch(e){
-	Array.from = function(item){
-		if (typeof item != 'string' && Type.isEnumerable(item) && typeOf(item) != 'array'){
-			var i = item.length, array = new Array(i);
-			while (i--) array[i] = item[i];
-			return array;
-		}
-		return arrayFrom(item);
-	};
-
-	var prototype = Array.prototype,
-		slice = prototype.slice;
-	['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'concat', 'join', 'slice'].each(function(name){
-		var method = prototype[name];
-		Array[name] = function(item){
-			return method.apply(Array.from(item), slice.call(arguments, 1));
-		};
-	});
-}
-
-
-
-})();
-
-
-/*
----
-
-name: Event
-
-description: Contains the Event Class, to make the event object cross-browser.
-
-license: MIT-style license.
-
-requires: [Window, Document, Array, Function, String, Object]
-
-provides: Event
-
-...
-*/
-
-var Event = new Type('Event', function(event, win){
-	if (!win) win = window;
-	var doc = win.document;
-	event = event || win.event;
-	if (event.$extended) return event;
-	this.$extended = true;
-	var type = event.type,
-		target = event.target || event.srcElement,
-		page = {},
-		client = {};
-	while (target && target.nodeType == 3) target = target.parentNode;
-
-	if (type.indexOf('key') != -1){
-		var code = event.which || event.keyCode;
-		var key = Object.keyOf(Event.Keys, code);
-		if (type == 'keydown'){
-			var fKey = code - 111;
-			if (fKey > 0 && fKey < 13) key = 'f' + fKey;
-		}
-		if (!key) key = String.fromCharCode(code).toLowerCase();
-	} else if (type.test(/click|mouse|menu/i)){
-		doc = (!doc.compatMode || doc.compatMode == 'CSS1Compat') ? doc.html : doc.body;
-		page = {
-			x: (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft,
-			y: (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop
-		};
-		client = {
-			x: (event.pageX != null) ? event.pageX - win.pageXOffset : event.clientX,
-			y: (event.pageY != null) ? event.pageY - win.pageYOffset : event.clientY
-		};
-		if (type.test(/DOMMouseScroll|mousewheel/)){
-			var wheel = (event.wheelDelta) ? event.wheelDelta / 120 : -(event.detail || 0) / 3;
-		}
-		var rightClick = (event.which == 3) || (event.button == 2),
-			related = null;
-		if (type.test(/over|out/)){
-			related = event.relatedTarget || event[(type == 'mouseover' ? 'from' : 'to') + 'Element'];
-			var testRelated = function(){
-				while (related && related.nodeType == 3) related = related.parentNode;
-				return true;
-			};
-			var hasRelated = (Browser.firefox2) ? testRelated.attempt() : testRelated();
-			related = (hasRelated) ? related : null;
-		}
-	} else if (type.test(/gesture|touch/i)){
-		this.rotation = event.rotation;
-		this.scale = event.scale;
-		this.targetTouches = event.targetTouches;
-		this.changedTouches = event.changedTouches;
-		var touches = this.touches = event.touches;
-		if (touches && touches[0]){
-			var touch = touches[0];
-			page = {x: touch.pageX, y: touch.pageY};
-			client = {x: touch.clientX, y: touch.clientY};
-		}
-	}
-
-	return Object.append(this, {
-		event: event,
-		type: type,
-
-		page: page,
-		client: client,
-		rightClick: rightClick,
-
-		wheel: wheel,
-
-		relatedTarget: document.id(related),
-		target: document.id(target),
-
-		code: code,
-		key: key,
-
-		shift: event.shiftKey,
-		control: event.ctrlKey,
-		alt: event.altKey,
-		meta: event.metaKey
-	});
-});
-
-Event.Keys = {
-	'enter': 13,
-	'up': 38,
-	'down': 40,
-	'left': 37,
-	'right': 39,
-	'esc': 27,
-	'space': 32,
-	'backspace': 8,
-	'tab': 9,
-	'delete': 46
-};
-
-
-
-Event.implement({
-
-	stop: function(){
-		return this.stopPropagation().preventDefault();
-	},
-
-	stopPropagation: function(){
-		if (this.event.stopPropagation) this.event.stopPropagation();
-		else this.event.cancelBubble = true;
-		return this;
-	},
-
-	preventDefault: function(){
-		if (this.event.preventDefault) this.event.preventDefault();
-		else this.event.returnValue = false;
-		return this;
-	}
-
-});
 
 
 /*
@@ -1394,7 +950,7 @@ this.Events = new Class({
 	addEvent: function(type, fn, internal){
 		type = removeOn(type);
 
-		
+
 
 		this.$events[type] = (this.$events[type] || []).include(fn);
 		if (internal) fn.internal = true;
@@ -1417,7 +973,7 @@ this.Events = new Class({
 		}, this);
 		return this;
 	},
-	
+
 	removeEvent: function(type, fn){
 		type = removeOn(type);
 		var events = this.$events[type];
@@ -1438,7 +994,9 @@ this.Events = new Class({
 		for (type in this.$events){
 			if (events && events != type) continue;
 			var fns = this.$events[type];
-			for (var i = fns.length; i--;) this.removeEvent(type, fns[i]);
+			for (var i = fns.length; i--;) if (i in fns){
+				this.removeEvent(type, fns[i]);
+			}
 		}
 		return this;
 	}
@@ -1449,8 +1007,7 @@ this.Options = new Class({
 
 	setOptions: function(){
 		var options = this.options = Object.merge.apply(null, [{}, this.options].append(arguments));
-		if (!this.addEvent) return this;
-		for (var option in options){
+		if (this.addEvent) for (var option in options){
 			if (typeOf(options[option]) != 'function' || !(/^on[A-Z]/).test(option)) continue;
 			this.addEvent(option, options[option]);
 			delete options[option];
@@ -1465,13 +1022,342 @@ this.Options = new Class({
 
 /*
 ---
+
+name: Browser
+
+description: The Browser Object. Contains Browser initialization, Window and Document, and the Browser Hash.
+
+license: MIT-style license.
+
+requires: [Array, Function, Number, String]
+
+provides: [Browser, Window, Document]
+
+...
+*/
+
+(function(){
+
+var document = this.document;
+var window = document.window = this;
+
+var UID = 1;
+
+this.$uid = (window.ActiveXObject) ? function(item){
+	return (item.uid || (item.uid = [UID++]))[0];
+} : function(item){
+	return item.uid || (item.uid = UID++);
+};
+
+$uid(window);
+$uid(document);
+
+var ua = navigator.userAgent.toLowerCase(),
+	platform = navigator.platform.toLowerCase(),
+	UA = ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/) || [null, 'unknown', 0],
+	mode = UA[1] == 'ie' && document.documentMode;
+
+var Browser = this.Browser = {
+
+	extend: Function.prototype.extend,
+
+	name: (UA[1] == 'version') ? UA[3] : UA[1],
+
+	version: mode || parseFloat((UA[1] == 'opera' && UA[4]) ? UA[4] : UA[2]),
+
+	Platform: {
+		name: ua.match(/ip(?:ad|od|hone)/) ? 'ios' : (ua.match(/(?:webos|android)/) || platform.match(/mac|win|linux/) || ['other'])[0]
+	},
+
+	Features: {
+		xpath: !!(document.evaluate),
+		air: !!(window.runtime),
+		query: !!(document.querySelector),
+		json: !!(window.JSON)
+	},
+
+	Plugins: {}
+
+};
+
+Browser[Browser.name] = true;
+Browser[Browser.name + parseInt(Browser.version, 10)] = true;
+Browser.Platform[Browser.Platform.name] = true;
+
+// Request
+
+Browser.Request = (function(){
+
+	var XMLHTTP = function(){
+		return new XMLHttpRequest();
+	};
+
+	var MSXML2 = function(){
+		return new ActiveXObject('MSXML2.XMLHTTP');
+	};
+
+	var MSXML = function(){
+		return new ActiveXObject('Microsoft.XMLHTTP');
+	};
+
+	return Function.attempt(function(){
+		XMLHTTP();
+		return XMLHTTP;
+	}, function(){
+		MSXML2();
+		return MSXML2;
+	}, function(){
+		MSXML();
+		return MSXML;
+	});
+
+})();
+
+Browser.Features.xhr = !!(Browser.Request);
+
+// Flash detection
+
+var version = (Function.attempt(function(){
+	return navigator.plugins['Shockwave Flash'].description;
+}, function(){
+	return new ActiveXObject('ShockwaveFlash.ShockwaveFlash').GetVariable('$version');
+}) || '0 r0').match(/\d+/g);
+
+Browser.Plugins.Flash = {
+	version: Number(version[0] || '0.' + version[1]) || 0,
+	build: Number(version[2]) || 0
+};
+
+// String scripts
+
+Browser.exec = function(text){
+	if (!text) return text;
+	if (window.execScript){
+		window.execScript(text);
+	} else {
+		var script = document.createElement('script');
+		script.setAttribute('type', 'text/javascript');
+		script.text = text;
+		document.head.appendChild(script);
+		document.head.removeChild(script);
+	}
+	return text;
+};
+
+String.implement('stripScripts', function(exec){
+	var scripts = '';
+	var text = this.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, function(all, code){
+		scripts += code + '\n';
+		return '';
+	});
+	if (exec === true) Browser.exec(scripts);
+	else if (typeOf(exec) == 'function') exec(scripts, text);
+	return text;
+});
+
+// Window, Document
+
+Browser.extend({
+	Document: this.Document,
+	Window: this.Window,
+	Element: this.Element,
+	Event: this.Event
+});
+
+this.Window = this.$constructor = new Type('Window', function(){});
+
+this.$family = Function.from('window').hide();
+
+Window.mirror(function(name, method){
+	window[name] = method;
+});
+
+this.Document = document.$constructor = new Type('Document', function(){});
+
+document.$family = Function.from('document').hide();
+
+Document.mirror(function(name, method){
+	document[name] = method;
+});
+
+document.html = document.documentElement;
+if (!document.head) document.head = document.getElementsByTagName('head')[0];
+
+if (document.execCommand) try {
+	document.execCommand("BackgroundImageCache", false, true);
+} catch (e){}
+
+/*<ltIE9>*/
+if (this.attachEvent && !this.addEventListener){
+	var unloadEvent = function(){
+		this.detachEvent('onunload', unloadEvent);
+		document.head = document.html = document.window = null;
+	};
+	this.attachEvent('onunload', unloadEvent);
+}
+
+// IE fails on collections and <select>.options (refers to <select>)
+var arrayFrom = Array.from;
+try {
+	arrayFrom(document.html.childNodes);
+} catch(e){
+	Array.from = function(item){
+		if (typeof item != 'string' && Type.isEnumerable(item) && typeOf(item) != 'array'){
+			var i = item.length, array = new Array(i);
+			while (i--) array[i] = item[i];
+			return array;
+		}
+		return arrayFrom(item);
+	};
+
+	var prototype = Array.prototype,
+		slice = prototype.slice;
+	['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift', 'concat', 'join', 'slice'].each(function(name){
+		var method = prototype[name];
+		Array[name] = function(item){
+			return method.apply(Array.from(item), slice.call(arguments, 1));
+		};
+	});
+}
+/*</ltIE9>*/
+
+
+
+})();
+
+
+/*
+---
+
+name: Object
+
+description: Object generic methods
+
+license: MIT-style license.
+
+requires: Type
+
+provides: [Object, Hash]
+
+...
+*/
+
+(function(){
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+Object.extend({
+
+	subset: function(object, keys){
+		var results = {};
+		for (var i = 0, l = keys.length; i < l; i++){
+			var k = keys[i];
+			if (k in object) results[k] = object[k];
+		}
+		return results;
+	},
+
+	map: function(object, fn, bind){
+		var results = {};
+		for (var key in object){
+			if (hasOwnProperty.call(object, key)) results[key] = fn.call(bind, object[key], key, object);
+		}
+		return results;
+	},
+
+	filter: function(object, fn, bind){
+		var results = {};
+		for (var key in object){
+			var value = object[key];
+			if (hasOwnProperty.call(object, key) && fn.call(bind, value, key, object)) results[key] = value;
+		}
+		return results;
+	},
+
+	every: function(object, fn, bind){
+		for (var key in object){
+			if (hasOwnProperty.call(object, key) && !fn.call(bind, object[key], key)) return false;
+		}
+		return true;
+	},
+
+	some: function(object, fn, bind){
+		for (var key in object){
+			if (hasOwnProperty.call(object, key) && fn.call(bind, object[key], key)) return true;
+		}
+		return false;
+	},
+
+	keys: function(object){
+		var keys = [];
+		for (var key in object){
+			if (hasOwnProperty.call(object, key)) keys.push(key);
+		}
+		return keys;
+	},
+
+	values: function(object){
+		var values = [];
+		for (var key in object){
+			if (hasOwnProperty.call(object, key)) values.push(object[key]);
+		}
+		return values;
+	},
+
+	getLength: function(object){
+		return Object.keys(object).length;
+	},
+
+	keyOf: function(object, value){
+		for (var key in object){
+			if (hasOwnProperty.call(object, key) && object[key] === value) return key;
+		}
+		return null;
+	},
+
+	contains: function(object, value){
+		return Object.keyOf(object, value) != null;
+	},
+
+	toQueryString: function(object, base){
+		var queryString = [];
+
+		Object.each(object, function(value, key){
+			if (base) key = base + '[' + key + ']';
+			var result;
+			switch (typeOf(value)){
+				case 'object': result = Object.toQueryString(value, key); break;
+				case 'array':
+					var qs = {};
+					value.each(function(val, i){
+						qs[i] = val;
+					});
+					result = Object.toQueryString(qs, key);
+				break;
+				default: result = key + '=' + encodeURIComponent(value);
+			}
+			if (value != null) queryString.push(result);
+		});
+
+		return queryString.join('&');
+	}
+
+});
+
+})();
+
+
+
+
+/*
+---
 name: Slick.Parser
 description: Standalone CSS3 Selector parser
 provides: Slick.Parser
 ...
 */
 
-(function(){
+;(function(){
 
 var parsed,
 	separatorIndex,
@@ -1488,13 +1374,18 @@ var parse = function(expression, isReversed){
 	reversed = !!isReversed;
 	var currentCache = (reversed) ? reverseCache : cache;
 	if (currentCache[expression]) return currentCache[expression];
-	parsed = {Slick: true, expressions: [], raw: expression, reverse: function(){
-		return parse(this.raw, true);
-	}};
+	parsed = {
+		Slick: true,
+		expressions: [],
+		raw: expression,
+		reverse: function(){
+			return parse(this.raw, true);
+		}
+	};
 	separatorIndex = -1;
 	while (expression != (expression = expression.replace(regexp, parser)));
 	parsed.length = parsed.expressions.length;
-	return currentCache[expression] = (reversed) ? reverse(parsed) : parsed;
+	return currentCache[parsed.raw] = (reversed) ? reverse(parsed) : parsed;
 };
 
 var reverseCombinator = function(combinator){
@@ -1523,7 +1414,9 @@ var reverse = function(expression){
 };
 
 var escapeRegExp = function(string){// Credit: XRegExp 0.6.1 (c) 2007-2008 Steven Levithan <http://stevenlevithan.com/regex/xregexp/> MIT License
-	return string.replace(/[-[\]{}()*+?.\\^$|,#\s]/g, "\\$&");
+	return string.replace(/[-[\]{}()*+?.\\^$|,#\s]/g, function(match){
+		return '\\' + match;
+	});
 };
 
 var regexp = new RegExp(
@@ -1555,7 +1448,7 @@ __END__
 	)?\
 	)"
 */
-	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|:+(<unicode>+)(?:\\((?:(?:([\"'])([^\\12]*)\\12)|((?:\\([^)]+\\)|[^()]*)+))\\))?)"
+	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|(:+)(<unicode>+)(?:\\((?:(?:([\"'])([^\\13]*)\\13)|((?:\\([^)]+\\)|[^()]*)+))\\))?)"
 	.replace(/<combinator>/, '[' + escapeRegExp(">+~`!@$%^&={}\\;</") + ']')
 	.replace(/<unicode>/g, '(?:[\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 	.replace(/<unicode1>/g, '(?:[:\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
@@ -1577,6 +1470,7 @@ function parser(
 	attributeQuote,
 	attributeValue,
 
+	pseudoMarker,
 	pseudoClass,
 	pseudoQuote,
 	pseudoClassQuotedValue,
@@ -1622,7 +1516,8 @@ function parser(
 		if (!currentParsed.pseudos) currentParsed.pseudos = [];
 		currentParsed.pseudos.push({
 			key: pseudoClass.replace(reUnescape, ''),
-			value: pseudoClassValue
+			value: pseudoClassValue,
+			type: pseudoMarker.length == 1 ? 'class' : 'element'
 		});
 
 	} else if (attributeKey){
@@ -1695,9 +1590,11 @@ requires: Slick.Parser
 ...
 */
 
-(function(){
+;(function(){
 
-var local = {};
+var local = {},
+	featuresCache = {},
+	toString = Object.prototype.toString;
 
 // Feature / Bug detection
 
@@ -1706,16 +1603,16 @@ local.isNativeCode = function(fn){
 };
 
 local.isXML = function(document){
-	return (!!document.xmlVersion) || (!!document.xml) || (Object.prototype.toString.call(document) === '[object XMLDocument]') ||
-	(document.nodeType === 9 && document.documentElement.nodeName !== 'HTML');
+	return (!!document.xmlVersion) || (!!document.xml) || (toString.call(document) == '[object XMLDocument]') ||
+	(document.nodeType == 9 && document.documentElement.nodeName != 'HTML');
 };
 
 local.setDocument = function(document){
 
 	// convert elements / window arguments to document. if document cannot be extrapolated, the function returns.
-
-	if (document.nodeType === 9); // document
-	else if (document.ownerDocument) document = document.ownerDocument; // node
+	var nodeType = document.nodeType;
+	if (nodeType == 9); // document
+	else if (nodeType) document = document.ownerDocument; // node
 	else if (document.navigator) document = document.document; // window
 	else return;
 
@@ -1723,106 +1620,166 @@ local.setDocument = function(document){
 
 	if (this.document === document) return;
 	this.document = document;
-	var root = this.root = document.documentElement;
 
-	this.isXMLDocument = this.isXML(document);
+	// check if we have done feature detection on this document before
 
-	this.brokenStarGEBTN
-	= this.starSelectsClosedQSA
-	= this.idGetsName
-	= this.brokenMixedCaseQSA
-	= this.brokenGEBCN
-	= this.brokenCheckedQSA
-	= this.brokenEmptyAttributeQSA
-	= this.isHTMLDocument
+	var root = document.documentElement,
+		rootUid = this.getUIDXML(root),
+		features = featuresCache[rootUid],
+		feature;
+
+	if (features){
+		for (feature in features){
+			this[feature] = features[feature];
+		}
+		return;
+	}
+
+	features = featuresCache[rootUid] = {};
+
+	features.root = root;
+	features.isXMLDocument = this.isXML(document);
+
+	features.brokenStarGEBTN
+	= features.starSelectsClosedQSA
+	= features.idGetsName
+	= features.brokenMixedCaseQSA
+	= features.brokenGEBCN
+	= features.brokenCheckedQSA
+	= features.brokenEmptyAttributeQSA
+	= features.isHTMLDocument
+	= features.nativeMatchesSelector
 	= false;
 
 	var starSelectsClosed, starSelectsComments,
-		brokenSecondClassNameGEBCN, cachedGetElementsByClassName;
+		brokenSecondClassNameGEBCN, cachedGetElementsByClassName,
+		brokenFormAttributeGetter;
 
-	var selected, id;
+	var selected, id = 'slick_uniqueid';
 	var testNode = document.createElement('div');
-	root.appendChild(testNode);
+
+	var testRoot = document.body || document.getElementsByTagName('body')[0] || root;
+	testRoot.appendChild(testNode);
 
 	// on non-HTML documents innerHTML and getElementsById doesnt work properly
 	try {
-		id = 'slick_getbyid_test';
 		testNode.innerHTML = '<a id="'+id+'"></a>';
-		this.isHTMLDocument = !!document.getElementById(id);
+		features.isHTMLDocument = !!document.getElementById(id);
 	} catch(e){};
 
-	if (this.isHTMLDocument){
-		
+	if (features.isHTMLDocument){
+
 		testNode.style.display = 'none';
-		
+
 		// IE returns comment nodes for getElementsByTagName('*') for some documents
 		testNode.appendChild(document.createComment(''));
-		starSelectsComments = (testNode.getElementsByTagName('*').length > 0);
+		starSelectsComments = (testNode.getElementsByTagName('*').length > 1);
 
 		// IE returns closed nodes (EG:"</foo>") for getElementsByTagName('*') for some documents
 		try {
 			testNode.innerHTML = 'foo</foo>';
 			selected = testNode.getElementsByTagName('*');
-			starSelectsClosed = (selected && selected.length && selected[0].nodeName.charAt(0) == '/');
+			starSelectsClosed = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
 		} catch(e){};
 
-		this.brokenStarGEBTN = starSelectsComments || starSelectsClosed;
-
-		// IE 8 returns closed nodes (EG:"</foo>") for querySelectorAll('*') for some documents
-		if (testNode.querySelectorAll) try {
-			testNode.innerHTML = 'foo</foo>';
-			selected = testNode.querySelectorAll('*');
-			this.starSelectsClosedQSA = (selected && selected.length && selected[0].nodeName.charAt(0) == '/');
-		} catch(e){};
+		features.brokenStarGEBTN = starSelectsComments || starSelectsClosed;
 
 		// IE returns elements with the name instead of just id for getElementsById for some documents
 		try {
-			id = 'slick_id_gets_name';
-			testNode.innerHTML = '<a name="'+id+'"></a><b id="'+id+'"></b>';
-			this.idGetsName = document.getElementById(id) === testNode.firstChild;
+			testNode.innerHTML = '<a name="'+ id +'"></a><b id="'+ id +'"></b>';
+			features.idGetsName = document.getElementById(id) === testNode.firstChild;
 		} catch(e){};
 
-		// Safari 3.2 querySelectorAll doesnt work with mixedcase on quirksmode
+		if (testNode.getElementsByClassName){
+
+			// Safari 3.2 getElementsByClassName caches results
+			try {
+				testNode.innerHTML = '<a class="f"></a><a class="b"></a>';
+				testNode.getElementsByClassName('b').length;
+				testNode.firstChild.className = 'b';
+				cachedGetElementsByClassName = (testNode.getElementsByClassName('b').length != 2);
+			} catch(e){};
+
+			// Opera 9.6 getElementsByClassName doesnt detects the class if its not the first one
+			try {
+				testNode.innerHTML = '<a class="a"></a><a class="f b a"></a>';
+				brokenSecondClassNameGEBCN = (testNode.getElementsByClassName('a').length != 2);
+			} catch(e){};
+
+			features.brokenGEBCN = cachedGetElementsByClassName || brokenSecondClassNameGEBCN;
+		}
+
+		if (testNode.querySelectorAll){
+			// IE 8 returns closed nodes (EG:"</foo>") for querySelectorAll('*') for some documents
+			try {
+				testNode.innerHTML = 'foo</foo>';
+				selected = testNode.querySelectorAll('*');
+				features.starSelectsClosedQSA = (selected && !!selected.length && selected[0].nodeName.charAt(0) == '/');
+			} catch(e){};
+
+			// Safari 3.2 querySelectorAll doesnt work with mixedcase on quirksmode
+			try {
+				testNode.innerHTML = '<a class="MiX"></a>';
+				features.brokenMixedCaseQSA = !testNode.querySelectorAll('.MiX').length;
+			} catch(e){};
+
+			// Webkit and Opera dont return selected options on querySelectorAll
+			try {
+				testNode.innerHTML = '<select><option selected="selected">a</option></select>';
+				features.brokenCheckedQSA = (testNode.querySelectorAll(':checked').length == 0);
+			} catch(e){};
+
+			// IE returns incorrect results for attr[*^$]="" selectors on querySelectorAll
+			try {
+				testNode.innerHTML = '<a class=""></a>';
+				features.brokenEmptyAttributeQSA = (testNode.querySelectorAll('[class*=""]').length != 0);
+			} catch(e){};
+
+		}
+
+		// IE6-7, if a form has an input of id x, form.getAttribute(x) returns a reference to the input
 		try {
-			testNode.innerHTML = '<a class="MiXedCaSe"></a>';
-			this.brokenMixedCaseQSA = !testNode.querySelectorAll('.MiXedCaSe').length;
+			testNode.innerHTML = '<form action="s"><input id="action"/></form>';
+			brokenFormAttributeGetter = (testNode.firstChild.getAttribute('action') != 's');
 		} catch(e){};
 
-		try {
-			testNode.innerHTML = '<a class="f"></a><a class="b"></a>';
-			testNode.getElementsByClassName('b').length;
-			testNode.firstChild.className = 'b';
-			cachedGetElementsByClassName = (testNode.getElementsByClassName('b').length != 2);
+		// native matchesSelector function
+
+		features.nativeMatchesSelector = root.matchesSelector || /*root.msMatchesSelector ||*/ root.mozMatchesSelector || root.webkitMatchesSelector;
+		if (features.nativeMatchesSelector) try {
+			// if matchesSelector trows errors on incorrect sintaxes we can use it
+			features.nativeMatchesSelector.call(root, ':slick');
+			features.nativeMatchesSelector = null;
 		} catch(e){};
 
-		// Opera 9.6 getElementsByClassName doesnt detects the class if its not the first one
-		try {
-			testNode.innerHTML = '<a class="a"></a><a class="f b a"></a>';
-			brokenSecondClassNameGEBCN = (testNode.getElementsByClassName('a').length != 2);
-		} catch(e){};
-
-		this.brokenGEBCN = cachedGetElementsByClassName || brokenSecondClassNameGEBCN;
-		
-		// Webkit dont return selected options on querySelectorAll
-		try {
-			testNode.innerHTML = '<select><option selected="selected">a</option></select>';
-			this.brokenCheckedQSA = (testNode.querySelectorAll(':checked').length == 0);
-		} catch(e){};
-		
-		// IE returns incorrect results for attr[*^$]="" selectors on querySelectorAll
-		try {
-			testNode.innerHTML = '<a class=""></a>';
-			this.brokenEmptyAttributeQSA = (testNode.querySelectorAll('[class*=""]').length != 0);
-		} catch(e){};
-		
 	}
 
-	root.removeChild(testNode);
-	testNode = null;
+	try {
+		root.slick_expando = 1;
+		delete root.slick_expando;
+		features.getUID = this.getUIDHTML;
+	} catch(e) {
+		features.getUID = this.getUIDXML;
+	}
+
+	testRoot.removeChild(testNode);
+	testNode = selected = testRoot = null;
+
+	// getAttribute
+
+	features.getAttribute = (features.isHTMLDocument && brokenFormAttributeGetter) ? function(node, name){
+		var method = this.attributeGetters[name];
+		if (method) return method.call(node);
+		var attributeNode = node.getAttributeNode(name);
+		return (attributeNode) ? attributeNode.nodeValue : null;
+	} : function(node, name){
+		var method = this.attributeGetters[name];
+		return (method) ? method.call(node) : node.getAttribute(name);
+	};
 
 	// hasAttribute
 
-	this.hasAttribute = (root && this.isNativeCode(root.hasAttribute)) ? function(node, attribute) {
+	features.hasAttribute = (root && this.isNativeCode(root.hasAttribute)) ? function(node, attribute) {
 		return node.hasAttribute(attribute);
 	} : function(node, attribute) {
 		node = node.getAttributeNode(attribute);
@@ -1831,7 +1788,7 @@ local.setDocument = function(document){
 
 	// contains
 	// FIXME: Add specs: local.contains should be different for xml and html documents?
-	this.contains = (root && this.isNativeCode(root.contains)) ? function(context, node){
+	features.contains = (root && this.isNativeCode(root.contains)) ? function(context, node){
 		return context.contains(node);
 	} : (root && root.compareDocumentPosition) ? function(context, node){
 		return context === node || !!(context.compareDocumentPosition(node) & 16);
@@ -1845,7 +1802,7 @@ local.setDocument = function(document){
 	// document order sorting
 	// credits to Sizzle (http://sizzlejs.com/)
 
-	this.documentSorter = (root.compareDocumentPosition) ? function(a, b){
+	features.documentSorter = (root.compareDocumentPosition) ? function(a, b){
 		if (!a.compareDocumentPosition || !b.compareDocumentPosition) return 0;
 		return a.compareDocumentPosition(b) & 4 ? -1 : a === b ? 0 : 1;
 	} : ('sourceIndex' in root) ? function(a, b){
@@ -1861,52 +1818,149 @@ local.setDocument = function(document){
 		return aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
 	} : null ;
 
-	this.getUID = (this.isHTMLDocument) ? this.getUIDHTML : this.getUIDXML;
+	root = null;
 
+	for (feature in features){
+		this[feature] = features[feature];
+	}
 };
 
 // Main Method
+
+var reSimpleSelector = /^([#.]?)((?:[\w-]+|\*))$/,
+	reEmptyAttribute = /\[.+[*$^]=(?:""|'')?\]/,
+	qsaFailExpCache = {};
 
 local.search = function(context, expression, append, first){
 
 	var found = this.found = (first) ? null : (append || []);
 
-	// context checks
-
-	if (!context) return found; // No context
-	if (context.navigator) context = context.document; // Convert the node from a window to a document
-	else if (!context.nodeType) return found; // Reject misc junk input
+	if (!context) return found;
+	else if (context.navigator) context = context.document; // Convert the node from a window to a document
+	else if (!context.nodeType) return found;
 
 	// setup
 
-	var parsed, i;
+	var parsed, i,
+		uniques = this.uniques = {},
+		hasOthers = !!(append && append.length),
+		contextIsDocument = (context.nodeType == 9);
 
-	var uniques = this.uniques = {};
-
-	if (this.document !== (context.ownerDocument || context)) this.setDocument(context);
-
-	// should sort if there are nodes in append and if you pass multiple expressions.
-	// should remove duplicates if append already has items
-	var shouldUniques = !!(append && append.length);
+	if (this.document !== (contextIsDocument ? context : context.ownerDocument)) this.setDocument(context);
 
 	// avoid duplicating items already in the append array
-	if (shouldUniques) for (i = found.length; i--;) this.uniques[this.getUID(found[i])] = true;
+	if (hasOthers) for (i = found.length; i--;) uniques[this.getUID(found[i])] = true;
 
 	// expression checks
 
 	if (typeof expression == 'string'){ // expression is a string
 
-		// Overrides
+		/*<simple-selectors-override>*/
+		var simpleSelector = expression.match(reSimpleSelector);
+		simpleSelectors: if (simpleSelector) {
 
-		for (i = this.overrides.length; i--;){
-			var override = this.overrides[i];
-			if (override.regexp.test(expression)){
-				var result = override.method.call(context, expression, found, first);
-				if (result === false) continue;
-				if (result === true) return found;
-				return result;
+			var symbol = simpleSelector[1],
+				name = simpleSelector[2],
+				node, nodes;
+
+			if (!symbol){
+
+				if (name == '*' && this.brokenStarGEBTN) break simpleSelectors;
+				nodes = context.getElementsByTagName(name);
+				if (first) return nodes[0] || null;
+				for (i = 0; node = nodes[i++];){
+					if (!(hasOthers && uniques[this.getUID(node)])) found.push(node);
+				}
+
+			} else if (symbol == '#'){
+
+				if (!this.isHTMLDocument || !contextIsDocument) break simpleSelectors;
+				node = context.getElementById(name);
+				if (!node) return found;
+				if (this.idGetsName && node.getAttributeNode('id').nodeValue != name) break simpleSelectors;
+				if (first) return node || null;
+				if (!(hasOthers && uniques[this.getUID(node)])) found.push(node);
+
+			} else if (symbol == '.'){
+
+				if (!this.isHTMLDocument || ((!context.getElementsByClassName || this.brokenGEBCN) && context.querySelectorAll)) break simpleSelectors;
+				if (context.getElementsByClassName && !this.brokenGEBCN){
+					nodes = context.getElementsByClassName(name);
+					if (first) return nodes[0] || null;
+					for (i = 0; node = nodes[i++];){
+						if (!(hasOthers && uniques[this.getUID(node)])) found.push(node);
+					}
+				} else {
+					var matchClass = new RegExp('(^|\\s)'+ Slick.escapeRegExp(name) +'(\\s|$)');
+					nodes = context.getElementsByTagName('*');
+					for (i = 0; node = nodes[i++];){
+						className = node.className;
+						if (!(className && matchClass.test(className))) continue;
+						if (first) return node;
+						if (!(hasOthers && uniques[this.getUID(node)])) found.push(node);
+					}
+				}
+
 			}
+
+			if (hasOthers) this.sort(found);
+			return (first) ? null : found;
+
 		}
+		/*</simple-selectors-override>*/
+
+		/*<query-selector-override>*/
+		querySelector: if (context.querySelectorAll) {
+
+			if (!this.isHTMLDocument
+				|| qsaFailExpCache[expression]
+				//TODO: only skip when expression is actually mixed case
+				|| this.brokenMixedCaseQSA
+				|| (this.brokenCheckedQSA && expression.indexOf(':checked') > -1)
+				|| (this.brokenEmptyAttributeQSA && reEmptyAttribute.test(expression))
+				|| (!contextIsDocument //Abort when !contextIsDocument and...
+					//  there are multiple expressions in the selector
+					//  since we currently only fix non-document rooted QSA for single expression selectors
+					&& expression.indexOf(',') > -1
+				)
+				|| Slick.disableQSA
+			) break querySelector;
+
+			var _expression = expression, _context = context;
+			if (!contextIsDocument){
+				// non-document rooted QSA
+				// credits to Andrew Dupont
+				var currentId = _context.getAttribute('id'), slickid = 'slickid__';
+				_context.setAttribute('id', slickid);
+				_expression = '#' + slickid + ' ' + _expression;
+				context = _context.parentNode;
+			}
+
+			try {
+				if (first) return context.querySelector(_expression) || null;
+				else nodes = context.querySelectorAll(_expression);
+			} catch(e) {
+				qsaFailExpCache[expression] = 1;
+				break querySelector;
+			} finally {
+				if (!contextIsDocument){
+					if (currentId) _context.setAttribute('id', currentId);
+					else _context.removeAttribute('id');
+					context = _context;
+				}
+			}
+
+			if (this.starSelectsClosedQSA) for (i = 0; node = nodes[i++];){
+				if (node.nodeName > '@' && !(hasOthers && uniques[this.getUID(node)])) found.push(node);
+			} else for (i = 0; node = nodes[i++];){
+				if (!(hasOthers && uniques[this.getUID(node)])) found.push(node);
+			}
+
+			if (hasOthers) this.sort(found);
+			return found;
+
+		}
+		/*</query-selector-override>*/
 
 		parsed = this.Slick.parse(expression);
 		if (!parsed.length) return found;
@@ -1921,9 +1975,9 @@ local.search = function(context, expression, append, first){
 		return found;
 	}
 
-	// cache elements for the nth selectors
-
 	/*<pseudo-selectors>*//*<nth-pseudo-selectors>*/
+
+	// cache elements for the nth selectors
 
 	this.posNTH = {};
 	this.posNTHLast = {};
@@ -1933,7 +1987,7 @@ local.search = function(context, expression, append, first){
 	/*</nth-pseudo-selectors>*//*</pseudo-selectors>*/
 
 	// if append is null and there is only a single selector with one expression use pushArray, else use pushUID
-	this.push = (!shouldUniques && (first || (parsed.length == 1 && parsed.expressions[0].length == 1))) ? this.pushArray : this.pushUID;
+	this.push = (!hasOthers && (first || (parsed.length == 1 && parsed.expressions[0].length == 1))) ? this.pushArray : this.pushUID;
 
 	if (found == null) found = [];
 
@@ -1979,7 +2033,8 @@ local.search = function(context, expression, append, first){
 		currentItems = this.found;
 	}
 
-	if (shouldUniques || (parsed.expressions.length > 1)) this.sort(found);
+	// should sort if there are nodes in append and if you pass multiple expressions.
+	if (hasOthers || (parsed.expressions.length > 1)) this.sort(found);
 
 	return (first) ? (found[0] || null) : found;
 };
@@ -1987,7 +2042,7 @@ local.search = function(context, expression, append, first){
 // Utils
 
 local.uidx = 1;
-local.uidk = 'slick:uniqueid';
+local.uidk = 'slick-uniqueid';
 
 local.getUIDXML = function(node){
 	var uid = node.getAttribute(this.uidk);
@@ -2041,12 +2096,12 @@ local.createNTHPseudo = function(child, sibling, positions, ofType){
 			if (ofType){
 				var nodeName = node.nodeName;
 				do {
-					if (el.nodeName !== nodeName) continue;
+					if (el.nodeName != nodeName) continue;
 					this[positions][this.getUID(el)] = count++;
 				} while ((el = el[sibling]));
 			} else {
 				do {
-					if (el.nodeType !== 1) continue;
+					if (el.nodeType != 1) continue;
 					this[positions][this.getUID(el)] = count++;
 				} while ((el = el[sibling]));
 			}
@@ -2080,17 +2135,29 @@ local.pushUID = function(node, tag, id, classes, attributes, pseudos){
 };
 
 local.matchNode = function(node, selector){
+	if (this.isHTMLDocument && this.nativeMatchesSelector){
+		try {
+			return this.nativeMatchesSelector.call(node, selector.replace(/\[([^=]+)=\s*([^'"\]]+?)\s*\]/g, '[$1="$2"]'));
+		} catch(matchError) {}
+	}
+
 	var parsed = this.Slick.parse(selector);
 	if (!parsed) return true;
 
 	// simple (single) selectors
-	if(parsed.length == 1 && parsed.expressions[0].length == 1){
-		var exp = parsed.expressions[0][0];
-		return this.matchSelector(node, (this.isXMLDocument) ? exp.tag : exp.tag.toUpperCase(), exp.id, exp.classes, exp.attributes, exp.pseudos);
+	var expressions = parsed.expressions, simpleExpCounter = 0, i;
+	for (i = 0; (currentExpression = expressions[i]); i++){
+		if (currentExpression.length == 1){
+			var exp = currentExpression[0];
+			if (this.matchSelector(node, (this.isXMLDocument) ? exp.tag : exp.tag.toUpperCase(), exp.id, exp.classes, exp.attributes, exp.pseudos)) return true;
+			simpleExpCounter++;
+		}
 	}
 
-	var nodes = this.search(this.document, parsed);
-	for (var i = 0, item; item = nodes[i++];){
+	if (simpleExpCounter == parsed.length) return false;
+
+	var nodes = this.search(this.document, parsed), item;
+	for (i = 0; item = nodes[i++];){
 		if (item === node) return true;
 	}
 	return false;
@@ -2105,10 +2172,11 @@ local.matchPseudo = function(node, name, argument){
 
 local.matchSelector = function(node, tag, id, classes, attributes, pseudos){
 	if (tag){
+		var nodeName = (this.isXMLDocument) ? node.nodeName : node.nodeName.toUpperCase();
 		if (tag == '*'){
-			if (node.nodeName < '@') return false; // Fix for comment nodes and closed nodes
+			if (nodeName < '@') return false; // Fix for comment nodes and closed nodes
 		} else {
-			if (node.nodeName != tag) return false;
+			if (nodeName != tag) return false;
 		}
 	}
 
@@ -2116,7 +2184,7 @@ local.matchSelector = function(node, tag, id, classes, attributes, pseudos){
 
 	var i, part, cls;
 	if (classes) for (i = classes.length; i--;){
-		cls = ('className' in node) ? node.className : node.getAttribute('class');
+		cls = node.getAttribute('class') || node.className;
 		if (!(cls && classes[i].regexp.test(cls))) return false;
 	}
 	if (attributes) for (i = attributes.length; i--;){
@@ -2145,15 +2213,18 @@ var combinators = {
 					children = node.all[id];
 					if (!children) return;
 					if (!children[0]) children = [children];
-					for (i = 0; item = children[i++];) if (item.getAttributeNode('id').nodeValue == id){
-						this.push(item, tag, null, classes, attributes, pseudos);
-						break;
-					} 
+					for (i = 0; item = children[i++];){
+						var idNode = item.getAttributeNode('id');
+						if (idNode && idNode.nodeValue == id){
+							this.push(item, tag, null, classes, attributes, pseudos);
+							break;
+						}
+					}
 					return;
 				}
 				if (!item){
 					// if the context is in the dom we return, else we will try GEBTN, breaking the getById label
-					if (this.contains(this.document.documentElement, node)) return;
+					if (this.contains(this.root, node)) return;
 					else break getById;
 				} else if (this.document !== node && !this.contains(node, item)) return;
 				this.push(item, tag, null, classes, attributes, pseudos);
@@ -2176,12 +2247,12 @@ var combinators = {
 
 	'>': function(node, tag, id, classes, attributes, pseudos){ // direct children
 		if ((node = node.firstChild)) do {
-			if (node.nodeType === 1) this.push(node, tag, id, classes, attributes, pseudos);
+			if (node.nodeType == 1) this.push(node, tag, id, classes, attributes, pseudos);
 		} while ((node = node.nextSibling));
 	},
 
 	'+': function(node, tag, id, classes, attributes, pseudos){ // next sibling
-		while ((node = node.nextSibling)) if (node.nodeType === 1){
+		while ((node = node.nextSibling)) if (node.nodeType == 1){
 			this.push(node, tag, id, classes, attributes, pseudos);
 			break;
 		}
@@ -2190,14 +2261,14 @@ var combinators = {
 	'^': function(node, tag, id, classes, attributes, pseudos){ // first child
 		node = node.firstChild;
 		if (node){
-			if (node.nodeType === 1) this.push(node, tag, id, classes, attributes, pseudos);
+			if (node.nodeType == 1) this.push(node, tag, id, classes, attributes, pseudos);
 			else this['combinator:+'](node, tag, id, classes, attributes, pseudos);
 		}
 	},
 
 	'~': function(node, tag, id, classes, attributes, pseudos){ // next siblings
 		while ((node = node.nextSibling)){
-			if (node.nodeType !== 1) continue;
+			if (node.nodeType != 1) continue;
 			var uid = this.getUID(node);
 			if (this.bitUniques[uid]) break;
 			this.bitUniques[uid] = true;
@@ -2215,7 +2286,7 @@ var combinators = {
 		this['combinator:!~'](node, tag, id, classes, attributes, pseudos);
 	},
 
-	'!': function(node, tag, id, classes, attributes, pseudos){  // all parent nodes up to document
+	'!': function(node, tag, id, classes, attributes, pseudos){ // all parent nodes up to document
 		while ((node = node.parentNode)) if (node !== this.document) this.push(node, tag, id, classes, attributes, pseudos);
 	},
 
@@ -2225,7 +2296,7 @@ var combinators = {
 	},
 
 	'!+': function(node, tag, id, classes, attributes, pseudos){ // previous sibling
-		while ((node = node.previousSibling)) if (node.nodeType === 1){
+		while ((node = node.previousSibling)) if (node.nodeType == 1){
 			this.push(node, tag, id, classes, attributes, pseudos);
 			break;
 		}
@@ -2234,14 +2305,14 @@ var combinators = {
 	'!^': function(node, tag, id, classes, attributes, pseudos){ // last child
 		node = node.lastChild;
 		if (node){
-			if (node.nodeType === 1) this.push(node, tag, id, classes, attributes, pseudos);
+			if (node.nodeType == 1) this.push(node, tag, id, classes, attributes, pseudos);
 			else this['combinator:!+'](node, tag, id, classes, attributes, pseudos);
 		}
 	},
 
 	'!~': function(node, tag, id, classes, attributes, pseudos){ // previous siblings
 		while ((node = node.previousSibling)){
-			if (node.nodeType !== 1) continue;
+			if (node.nodeType != 1) continue;
 			var uid = this.getUID(node);
 			if (this.bitUniques[uid]) break;
 			this.bitUniques[uid] = true;
@@ -2271,20 +2342,20 @@ var pseudos = {
 	},
 
 	'first-child': function(node){
-		while ((node = node.previousSibling)) if (node.nodeType === 1) return false;
+		while ((node = node.previousSibling)) if (node.nodeType == 1) return false;
 		return true;
 	},
 
 	'last-child': function(node){
-		while ((node = node.nextSibling)) if (node.nodeType === 1) return false;
+		while ((node = node.nextSibling)) if (node.nodeType == 1) return false;
 		return true;
 	},
 
 	'only-child': function(node){
 		var prev = node;
-		while ((prev = prev.previousSibling)) if (prev.nodeType === 1) return false;
+		while ((prev = prev.previousSibling)) if (prev.nodeType == 1) return false;
 		var next = node;
-		while ((next = next.nextSibling)) if (next.nodeType === 1) return false;
+		while ((next = next.nextSibling)) if (next.nodeType == 1) return false;
 		return true;
 	},
 
@@ -2302,11 +2373,11 @@ var pseudos = {
 		return this['pseudo:nth-child'](node, '' + index + 1);
 	},
 
-	'even': function(node, argument){
+	'even': function(node){
 		return this['pseudo:nth-child'](node, '2n');
 	},
 
-	'odd': function(node, argument){
+	'odd': function(node){
 		return this['pseudo:nth-child'](node, '2n+1');
 	},
 
@@ -2316,21 +2387,21 @@ var pseudos = {
 
 	'first-of-type': function(node){
 		var nodeName = node.nodeName;
-		while ((node = node.previousSibling)) if (node.nodeName === nodeName) return false;
+		while ((node = node.previousSibling)) if (node.nodeName == nodeName) return false;
 		return true;
 	},
 
 	'last-of-type': function(node){
 		var nodeName = node.nodeName;
-		while ((node = node.nextSibling)) if (node.nodeName === nodeName) return false;
+		while ((node = node.nextSibling)) if (node.nodeName == nodeName) return false;
 		return true;
 	},
 
 	'only-of-type': function(node){
 		var prev = node, nodeName = node.nodeName;
-		while ((prev = prev.previousSibling)) if (prev.nodeName === nodeName) return false;
+		while ((prev = prev.previousSibling)) if (prev.nodeName == nodeName) return false;
 		var next = node;
-		while ((next = next.nextSibling)) if (next.nodeName === nodeName) return false;
+		while ((next = next.nextSibling)) if (next.nodeName == nodeName) return false;
 		return true;
 	},
 
@@ -2339,11 +2410,11 @@ var pseudos = {
 	// custom pseudos
 
 	'enabled': function(node){
-		return (node.disabled === false);
+		return !node.disabled;
 	},
 
 	'disabled': function(node){
-		return (node.disabled === true);
+		return node.disabled;
 	},
 
 	'checked': function(node){
@@ -2357,7 +2428,7 @@ var pseudos = {
 	'root': function(node){
 		return (node === this.root);
 	},
-	
+
 	'selected': function(node){
 		return node.selected;
 	}
@@ -2369,10 +2440,10 @@ for (var p in pseudos) local['pseudo:' + p] = pseudos[p];
 
 // attributes methods
 
-local.attributeGetters = {
+var attributeGetters = local.attributeGetters = {
 
 	'class': function(){
-		return ('className' in this) ? this.className : this.getAttribute('class');
+		return this.getAttribute('class') || this.className;
 	},
 
 	'for': function(){
@@ -2385,139 +2456,31 @@ local.attributeGetters = {
 
 	'style': function(){
 		return (this.style) ? this.style.cssText : this.getAttribute('style');
+	},
+
+	'tabindex': function(){
+		var attributeNode = this.getAttributeNode('tabindex');
+		return (attributeNode && attributeNode.specified) ? attributeNode.nodeValue : null;
+	},
+
+	'type': function(){
+		return this.getAttribute('type');
+	},
+
+	'maxlength': function(){
+		var attributeNode = this.getAttributeNode('maxLength');
+		return (attributeNode && attributeNode.specified) ? attributeNode.nodeValue : null;
 	}
 
 };
 
-local.getAttribute = function(node, name){
-	// FIXME: check if getAttribute() will get input elements on a form on this browser
-	// getAttribute is faster than getAttributeNode().nodeValue
-	var method = this.attributeGetters[name];
-	if (method) return method.call(node);
-	var attributeNode = node.getAttributeNode(name);
-	return attributeNode ? attributeNode.nodeValue : null;
-};
-
-// overrides
-
-local.overrides = [];
-
-local.override = function(regexp, method){
-	this.overrides.push({regexp: regexp, method: method});
-};
-
-/*<overrides>*/
-
-/*<query-selector-override>*/
-
-var reEmptyAttribute = /\[.*[*$^]=(?:["']{2})?\]/;
-
-local.override(/./, function(expression, found, first){ //querySelectorAll override
-
-	if (!this.querySelectorAll || this.nodeType != 9 || !local.isHTMLDocument || local.brokenMixedCaseQSA ||
-	(local.brokenCheckedQSA && expression.indexOf(':checked') > -1) ||
-	(local.brokenEmptyAttributeQSA && reEmptyAttribute.test(expression)) || Slick.disableQSA) return false;
-
-	var nodes, node;
-	try {
-		if (first) return this.querySelector(expression) || null;
-		else nodes = this.querySelectorAll(expression);
-	} catch(error){
-		return false;
-	}
-
-	var i, hasOthers = !!(found.length);
-
-	if (local.starSelectsClosedQSA) for (i = 0; node = nodes[i++];){
-		if (node.nodeName > '@' && (!hasOthers || !local.uniques[local.getUIDHTML(node)])) found.push(node);
-	} else for (i = 0; node = nodes[i++];){
-		if (!hasOthers || !local.uniques[local.getUIDHTML(node)]) found.push(node);
-	}
-
-	if (hasOthers) local.sort(found);
-
-	return true;
-
-});
-
-/*</query-selector-override>*/
-
-/*<tag-override>*/
-
-local.override(/^[\w-]+$|^\*$/, function(expression, found, first){ // tag override
-	var tag = expression;
-	if (tag == '*' && local.brokenStarGEBTN) return false;
-
-	var nodes = this.getElementsByTagName(tag);
-
-	if (first) return nodes[0] || null;
-	var i, node, hasOthers = !!(found.length);
-
-	for (i = 0; node = nodes[i++];){
-		if (!hasOthers || !local.uniques[local.getUID(node)]) found.push(node);
-	}
-
-	if (hasOthers) local.sort(found);
-
-	return true;
-});
-
-/*</tag-override>*/
-
-/*<class-override>*/
-
-local.override(/^\.[\w-]+$/, function(expression, found, first){ // class override
-	if (!local.isHTMLDocument || (!this.getElementsByClassName && this.querySelectorAll)) return false;
-
-	var nodes, node, i, hasOthers = !!(found && found.length), className = expression.substring(1);
-	if (this.getElementsByClassName && !local.brokenGEBCN){
-		nodes = this.getElementsByClassName(className);
-		if (first) return nodes[0] || null;
-		for (i = 0; node = nodes[i++];){
-			if (!hasOthers || !local.uniques[local.getUIDHTML(node)]) found.push(node);
-		}
-	} else {
-		var matchClass = new RegExp('(^|\\s)'+ Slick.escapeRegExp(className) +'(\\s|$)');
-		nodes = this.getElementsByTagName('*');
-		for (i = 0; node = nodes[i++];){
-			className = node.className;
-			if (!className || !matchClass.test(className)) continue;
-			if (first) return node;
-			if (!hasOthers || !local.uniques[local.getUIDHTML(node)]) found.push(node);
-		}
-	}
-	if (hasOthers) local.sort(found);
-	return (first) ? null : true;
-});
-
-/*</class-override>*/
-
-/*<id-override>*/
-
-local.override(/^#[\w-]+$/, function(expression, found, first){ // ID override
-	if (!local.isHTMLDocument || this.nodeType != 9) return false;
-
-	var id = expression.substring(1), el = this.getElementById(id);
-	if (!el) return found;
-	if (local.idGetsName && el.getAttributeNode('id').nodeValue != id) return false;
-	if (first) return el || null;
-	var hasOthers = !!(found.length);
-	if (!hasOthers || !local.uniques[local.getUIDHTML(el)]) found.push(el);
-	if (hasOthers) local.sort(found);
-	return true;
-});
-
-/*</id-override>*/
-
-/*</overrides>*/
-
-if (typeof document != 'undefined') local.setDocument(document);
+attributeGetters.MAXLENGTH = attributeGetters.maxLength = attributeGetters.maxlength;
 
 // Slick
 
 var Slick = local.Slick = (this.Slick || {});
 
-Slick.version = '0.9dev';
+Slick.version = '1.1.6';
 
 // Slick finder
 
@@ -2539,7 +2502,13 @@ Slick.contains = function(container, node){
 // Slick attribute getter
 
 Slick.getAttribute = function(node, name){
+	local.setDocument(node);
 	return local.getAttribute(node, name);
+};
+
+Slick.hasAttribute = function(node, name){
+	local.setDocument(node);
+	return local.hasAttribute(node, name);
 };
 
 // Slick matcher
@@ -2547,7 +2516,6 @@ Slick.getAttribute = function(node, name){
 Slick.match = function(node, selector){
 	if (!(node && selector)) return false;
 	if (!selector || selector === node) return true;
-	if (typeof selector != 'string') return false;
 	local.setDocument(node);
 	return local.matchNode(node, selector);
 };
@@ -2607,7 +2575,7 @@ description: One of the most important items in MooTools. Contains the dollar fu
 
 license: MIT-style license.
 
-requires: [Window, Document, Array, String, Function, Number, Slick.Parser, Slick.Finder]
+requires: [Window, Document, Array, String, Function, Object, Number, Slick.Parser, Slick.Finder]
 
 provides: [Element, Elements, $, $$, Iframe, Selectors]
 
@@ -2621,16 +2589,18 @@ var Element = function(tag, props){
 
 	if (!props) props = {};
 
-	if (!tag.test(/^[\w-]+$/)){
+	if (!(/^[\w-]+$/).test(tag)){
 		var parsed = Slick.parse(tag).expressions[0][0];
 		tag = (parsed.tag == '*') ? 'div' : parsed.tag;
 		if (parsed.id && props.id == null) props.id = parsed.id;
 
 		var attributes = parsed.attributes;
-		if (attributes) for (var i = 0, l = attributes.length; i < l; i++){
-			var attr = attributes[i];
-			if (attr.value != null && attr.operator == '=' && props[attr.key] == null)
-				props[attr.key] = attr.value;
+		if (attributes) for (var attr, i = 0, l = attributes.length; i < l; i++){
+			attr = attributes[i];
+			if (props[attr.key] != null) continue;
+
+			if (attr.value != null && attr.operator == '=') props[attr.key] = attr.value;
+			else if (!attr.value && !attr.operator) props[attr.key] = true;
 		}
 
 		if (parsed.classList && props['class'] == null) props['class'] = parsed.classList.join(' ');
@@ -2689,7 +2659,7 @@ var IFrame = new Type('IFrame', function(){
 	var onLoad = function(){
 		onload.call(iframe.contentWindow);
 	};
-	
+
 	if (window.frames[props.id]) onLoad();
 	else iframe.addListener('load', onLoad);
 	return iframe;
@@ -2729,6 +2699,15 @@ new Type('Elements', Elements).implement({
 		return (this.length = length);
 	}.protect(),
 
+	unshift: function(){
+		var items = [];
+		for (var i = 0, l = arguments.length; i < l; i++){
+			var item = document.id(arguments[i]);
+			if (item) items.push(item);
+		}
+		return Array.prototype.unshift.apply(this, items);
+	}.protect(),
+
 	concat: function(){
 		var newElements = new Elements(this);
 		for (var i = 0, l = arguments.length; i < l; i++){
@@ -2751,6 +2730,8 @@ new Type('Elements', Elements).implement({
 
 });
 
+
+
 (function(){
 
 // FF, IE
@@ -2759,9 +2740,9 @@ var splice = Array.prototype.splice, object = {'0': 0, '1': 1, length: 2};
 splice.call(object, 1, 1);
 if (object[1] == 1) Elements.implement('splice', function(){
 	var length = this.length;
-	splice.apply(this, arguments);
+	var result = splice.apply(this, arguments);
 	while (length >= this.length) delete this[length--];
-	return this;
+	return result;
 }.protect());
 
 Elements.implement(Array.prototype);
@@ -2826,7 +2807,7 @@ Document.implement({
 
 			element: function(el, nocash){
 				$uid(el);
-				if (!nocash && !el.$family && !(/^object|embed$/i).test(el.tagName)){
+				if (!nocash && !el.$family && !(/^(?:object|embed)$/i).test(el.tagName)){
 					Object.append(el, Element.Prototype);
 				}
 				return el;
@@ -2881,6 +2862,79 @@ Window.implement({
 
 });
 
+var contains = {contains: function(element){
+	return Slick.contains(this, element);
+}};
+
+if (!document.contains) Document.implement(contains);
+if (!document.createElement('div').contains) Element.implement(contains);
+
+
+
+// tree walking
+
+var injectCombinator = function(expression, combinator){
+	if (!expression) return combinator;
+
+	expression = Object.clone(Slick.parse(expression));
+
+	var expressions = expression.expressions;
+	for (var i = expressions.length; i--;)
+		expressions[i][0].combinator = combinator;
+
+	return expression;
+};
+
+Object.forEach({
+	getNext: '~',
+	getPrevious: '!~',
+	getParent: '!'
+}, function(combinator, method){
+	Element.implement(method, function(expression){
+		return this.getElement(injectCombinator(expression, combinator));
+	});
+});
+
+Object.forEach({
+	getAllNext: '~',
+	getAllPrevious: '!~',
+	getSiblings: '~~',
+	getChildren: '>',
+	getParents: '!'
+}, function(combinator, method){
+	Element.implement(method, function(expression){
+		return this.getElements(injectCombinator(expression, combinator));
+	});
+});
+
+Element.implement({
+
+	getFirst: function(expression){
+		return document.id(Slick.search(this, injectCombinator(expression, '>'))[0]);
+	},
+
+	getLast: function(expression){
+		return document.id(Slick.search(this, injectCombinator(expression, '>')).getLast());
+	},
+
+	getWindow: function(){
+		return this.ownerDocument.window;
+	},
+
+	getDocument: function(){
+		return this.ownerDocument;
+	},
+
+	getElementById: function(id){
+		return document.id(Slick.find(this, '#' + ('' + id).replace(/(\W)/g, '\\$1')));
+	},
+
+	match: function(expression){
+		return !expression || Slick.match(this, expression);
+	}
+
+});
+
 
 
 if (window.$$ == null) Window.implement('$$', function(selector){
@@ -2893,48 +2947,7 @@ if (window.$$ == null) Window.implement('$$', function(selector){
 
 (function(){
 
-var collected = {}, storage = {};
-var props = {input: 'checked', option: 'selected', textarea: 'value'};
-
-var get = function(uid){
-	return (storage[uid] || (storage[uid] = {}));
-};
-
-var clean = function(item){
-	if (item.removeEvents) item.removeEvents();
-	if (item.clearAttributes) item.clearAttributes();
-	var uid = item.uid;
-	if (uid != null){
-		delete collected[uid];
-		delete storage[uid];
-	}
-	return item;
-};
-
-var camels = ['defaultValue', 'accessKey', 'cellPadding', 'cellSpacing', 'colSpan', 'frameBorder', 'maxLength', 'readOnly',
-	'rowSpan', 'tabIndex', 'useMap'
-];
-var bools = ['compact', 'nowrap', 'ismap', 'declare', 'noshade', 'checked', 'disabled', 'readOnly', 'multiple', 'selected',
-	'noresize', 'defer'
-];
- var attributes = {
-	'html': 'innerHTML',
-	'class': 'className',
-	'for': 'htmlFor',
-	'text': (function(){
-		var temp = document.createElement('div');
-		return (temp.innerText == null) ? 'textContent' : 'innerText';
-	})()
-};
-var readOnly = ['type'];
-var expandos = ['value', 'defaultValue'];
-var uriAttrs = /^(?:href|src|usemap)$/i;
-
-bools = bools.associate(bools);
-camels = camels.associate(camels.map(String.toLowerCase));
-readOnly = readOnly.associate(readOnly);
-
-Object.append(attributes, expandos.associate(expandos));
+// Inserters
 
 var inserters = {
 
@@ -2962,19 +2975,120 @@ inserters.inside = inserters.bottom;
 
 
 
-var injectCombinator = function(expression, combinator){
-	if (!expression) return combinator;
+// getProperty / setProperty
 
-	expression = Slick.parse(expression);
+var propertyGetters = {}, propertySetters = {};
 
-	var expressions = expression.expressions;
-	for (var i = expressions.length; i--;)
-		expressions[i][0].combinator = combinator;
+// properties
 
-	return expression;
-};
+var properties = {};
+Array.forEach([
+	'type', 'value', 'defaultValue', 'accessKey', 'cellPadding', 'cellSpacing', 'colSpan',
+	'frameBorder', 'readOnly', 'rowSpan', 'tabIndex', 'useMap'
+], function(property){
+	properties[property.toLowerCase()] = property;
+});
+
+Object.append(properties, {
+	'html': 'innerHTML',
+	'text': (function(){
+		var temp = document.createElement('div');
+		return (temp.textContent == null) ? 'innerText': 'textContent';
+	})()
+});
+
+Object.forEach(properties, function(real, key){
+	propertySetters[key] = function(node, value){
+		node[real] = value;
+	};
+	propertyGetters[key] = function(node){
+		return node[real];
+	};
+});
+
+// Booleans
+
+var bools = [
+	'compact', 'nowrap', 'ismap', 'declare', 'noshade', 'checked',
+	'disabled', 'readOnly', 'multiple', 'selected', 'noresize',
+	'defer', 'defaultChecked', 'autofocus', 'controls', 'autoplay',
+	'loop'
+];
+
+var booleans = {};
+Array.forEach(bools, function(bool){
+	var lower = bool.toLowerCase();
+	booleans[lower] = bool;
+	propertySetters[lower] = function(node, value){
+		node[bool] = !!value;
+	};
+	propertyGetters[lower] = function(node){
+		return !!node[bool];
+	};
+});
+
+// Special cases
+
+Object.append(propertySetters, {
+
+	'class': function(node, value){
+		('className' in node) ? node.className = value : node.setAttribute('class', value);
+	},
+
+	'for': function(node, value){
+		('htmlFor' in node) ? node.htmlFor = value : node.setAttribute('for', value);
+	},
+
+	'style': function(node, value){
+		(node.style) ? node.style.cssText = value : node.setAttribute('style', value);
+	}
+
+});
+
+/* getProperty, setProperty */
 
 Element.implement({
+
+	setProperty: function(name, value){
+		var lower = name.toLowerCase();
+		if (value == null){
+			if (!booleans[lower]){
+				this.removeAttribute(name);
+				return this;
+			}
+			value = false;
+		}
+		var setter = propertySetters[lower];
+		if (setter) setter(this, value);
+		else this.setAttribute(name, value);
+		return this;
+	},
+
+	setProperties: function(attributes){
+		for (var attribute in attributes) this.setProperty(attribute, attributes[attribute]);
+		return this;
+	},
+
+	getProperty: function(name){
+		var getter = propertyGetters[name.toLowerCase()];
+		if (getter) return getter(this);
+		var result = Slick.getAttribute(this, name);
+		return (!result && !Slick.hasAttribute(this, name)) ? null : result;
+	},
+
+	getProperties: function(){
+		var args = Array.from(arguments);
+		return args.map(this.getProperty, this).associate(args);
+	},
+
+	removeProperty: function(name){
+		return this.setProperty(name, null);
+	},
+
+	removeProperties: function(){
+		Array.each(arguments, this.removeProperty, this);
+		return this;
+	},
 
 	set: function(prop, value){
 		var property = Element.Properties[prop];
@@ -2989,47 +3103,6 @@ Element.implement({
 	erase: function(prop){
 		var property = Element.Properties[prop];
 		(property && property.erase) ? property.erase.apply(this) : this.removeProperty(prop);
-		return this;
-	},
-
-	setProperty: function(attribute, value){
-		attribute = camels[attribute] || attribute;
-		if (value == null) return this.removeProperty(attribute);
-		var key = attributes[attribute];
-		(key) ? this[key] = value :
-			(bools[attribute]) ? this[attribute] = !!value : this.setAttribute(attribute, '' + value);
-		return this;
-	},
-
-	setProperties: function(attributes){
-		for (var attribute in attributes) this.setProperty(attribute, attributes[attribute]);
-		return this;
-	},
-
-	getProperty: function(attribute){
-		attribute = camels[attribute] || attribute;
-		var key = attributes[attribute] || readOnly[attribute];
-		return (key) ? this[key] :
-			(bools[attribute]) ? !!this[attribute] :
-			(uriAttrs.test(attribute) ? this.getAttribute(attribute, 2) :
-			(key = this.getAttributeNode(attribute)) ? key.nodeValue : null) || null;
-	},
-
-	getProperties: function(){
-		var args = Array.from(arguments);
-		return args.map(this.getProperty, this).associate(args);
-	},
-
-	removeProperty: function(attribute){
-		attribute = camels[attribute] || attribute;
-		var key = attributes[attribute];
-		(key) ? this[key] = '' :
-			(bools[attribute]) ? this[attribute] = false : this.removeAttribute(attribute);
-		return this;
-	},
-
-	removeProperties: function(){
-		Array.each(arguments, this.removeProperty, this);
 		return this;
 	},
 
@@ -3091,58 +3164,6 @@ Element.implement({
 		return this.replaces(el).grab(el, where);
 	},
 
-	getPrevious: function(expression){
-		return document.id(Slick.find(this, injectCombinator(expression, '!~')));
-	},
-
-	getAllPrevious: function(expression){
-		return Slick.search(this, injectCombinator(expression, '!~'), new Elements);
-	},
-
-	getNext: function(expression){
-		return document.id(Slick.find(this, injectCombinator(expression, '~')));
-	},
-
-	getAllNext: function(expression){
-		return Slick.search(this, injectCombinator(expression, '~'), new Elements);
-	},
-
-	getFirst: function(expression){
-		return document.id(Slick.search(this, injectCombinator(expression, '>'))[0]);
-	},
-
-	getLast: function(expression){
-		return document.id(Slick.search(this, injectCombinator(expression, '>')).getLast());
-	},
-
-	getParent: function(expression){
-		return document.id(Slick.find(this, injectCombinator(expression, '!')));
-	},
-
-	getParents: function(expression){
-		return Slick.search(this, injectCombinator(expression, '!'), new Elements);
-	},
-
-	getSiblings: function(expression){
-		return Slick.search(this, injectCombinator(expression, '~~'), new Elements);
-	},
-
-	getChildren: function(expression){
-		return Slick.search(this, injectCombinator(expression, '>'), new Elements);
-	},
-
-	getWindow: function(){
-		return this.ownerDocument.window;
-	},
-
-	getDocument: function(){
-		return this.ownerDocument;
-	},
-
-	getElementById: function(id){
-		return document.id(Slick.find(this, '#' + ('' + id).replace(/(\W)/g, '\\$1')));
-	},
-
 	getSelected: function(){
 		this.selectedIndex; // Safari 3.2.1
 		return new Elements(Array.from(this.options).filter(function(option){
@@ -3166,42 +3187,30 @@ Element.implement({
 			});
 		});
 		return queryString.join('&');
-	},
+	}
 
-	clone: function(contents, keepid){
-		contents = contents !== false;
-		var clone = this.cloneNode(contents);
-		var clean = function(node, element){
-			if (!keepid) node.removeAttribute('id');
-			if (Browser.ie){
-				node.clearAttributes();
-				node.mergeAttributes(element);
-				node.removeAttribute('uid');
-				if (node.options){
-					var no = node.options, eo = element.options;
-					for (var j = no.length; j--;) no[j].selected = eo[j].selected;
-				}
-			}
-			var prop = props[element.tagName.toLowerCase()];
-			if (prop && element[prop]) node[prop] = element[prop];
-		};
+});
 
-		var i;
-		if (contents){
-			var ce = clone.getElementsByTagName('*'), te = this.getElementsByTagName('*');
-			for (i = ce.length; i--;) clean(ce[i], te[i]);
-		}
+var collected = {}, storage = {};
 
-		clean(clone, this);
-		if (Browser.ie){
-			var ts = this.getElementsByTagName('object'),
-				cs = clone.getElementsByTagName('object'),
-				tl = ts.length, cl = cs.length;
-			for (i = 0; i < tl && i < cl; i++)
-				cs[i].outerHTML = ts[i].outerHTML;
-		}
-		return document.id(clone);
-	},
+var get = function(uid){
+	return (storage[uid] || (storage[uid] = {}));
+};
+
+var clean = function(item){
+	var uid = item.uid;
+	if (item.removeEvents) item.removeEvents();
+	if (item.clearAttributes) item.clearAttributes();
+	if (uid != null){
+		delete collected[uid];
+		delete storage[uid];
+	}
+	return item;
+};
+
+var formProps = {input: 'checked', option: 'selected', textarea: 'value'};
+
+Element.implement({
 
 	destroy: function(){
 		var children = clean(this).getElementsByTagName('*');
@@ -3219,20 +3228,43 @@ Element.implement({
 		return (this.parentNode) ? this.parentNode.removeChild(this) : this;
 	},
 
-	match: function(expression){
-		return !expression || Slick.match(this, expression);
+	clone: function(contents, keepid){
+		contents = contents !== false;
+		var clone = this.cloneNode(contents), ce = [clone], te = [this], i;
+
+		if (contents){
+			ce.append(Array.from(clone.getElementsByTagName('*')));
+			te.append(Array.from(this.getElementsByTagName('*')));
+		}
+
+		for (i = ce.length; i--;){
+			var node = ce[i], element = te[i];
+			if (!keepid) node.removeAttribute('id');
+			/*<ltIE9>*/
+			if (node.clearAttributes){
+				node.clearAttributes();
+				node.mergeAttributes(element);
+				node.removeAttribute('uid');
+				if (node.options){
+					var no = node.options, eo = element.options;
+					for (var j = no.length; j--;) no[j].selected = eo[j].selected;
+				}
+			}
+			/*</ltIE9>*/
+			var prop = formProps[element.tagName.toLowerCase()];
+			if (prop && element[prop]) node[prop] = element[prop];
+		}
+
+		/*<ltIE9>*/
+		if (Browser.ie){
+			var co = clone.getElementsByTagName('object'), to = this.getElementsByTagName('object');
+			for (i = co.length; i--;) co[i].outerHTML = to[i].outerHTML;
+		}
+		/*</ltIE9>*/
+		return document.id(clone);
 	}
 
 });
-
-var contains = {contains: function(element){
-	return Slick.contains(this, element);
-}};
-
-if (!document.contains) Document.implement(contains);
-if (!document.createElement('div').contains) Element.implement(contains);
-
-
 
 [Element, Window, Document].invoke('implement', {
 
@@ -3244,46 +3276,45 @@ if (!document.createElement('div').contains) Element.implement(contains);
 				old();
 			};
 		} else {
-			collected[this.uid] = this;
+			collected[$uid(this)] = this;
 		}
-		if (this.addEventListener) this.addEventListener(type, fn, false);
+		if (this.addEventListener) this.addEventListener(type, fn, !!arguments[2]);
 		else this.attachEvent('on' + type, fn);
 		return this;
 	},
 
 	removeListener: function(type, fn){
-		if (this.removeEventListener) this.removeEventListener(type, fn, false);
+		if (this.removeEventListener) this.removeEventListener(type, fn, !!arguments[2]);
 		else this.detachEvent('on' + type, fn);
 		return this;
 	},
 
 	retrieve: function(property, dflt){
-		var storage = get(this.uid), prop = storage[property];
+		var storage = get($uid(this)), prop = storage[property];
 		if (dflt != null && prop == null) prop = storage[property] = dflt;
 		return prop != null ? prop : null;
 	},
 
 	store: function(property, value){
-		var storage = get(this.uid);
+		var storage = get($uid(this));
 		storage[property] = value;
 		return this;
 	},
 
 	eliminate: function(property){
-		var storage = get(this.uid);
+		var storage = get($uid(this));
 		delete storage[property];
 		return this;
 	}
 
 });
 
-// IE purge
+/*<ltIE9>*/
 if (window.attachEvent && !window.addEventListener) window.addListener('unload', function(){
 	Object.each(collected, clean);
 	if (window.CollectGarbage) CollectGarbage();
 });
-
-})();
+/*</ltIE9>*/
 
 Element.Properties = {};
 
@@ -3313,15 +3344,7 @@ Element.Properties.tag = {
 
 };
 
-(function(maxLength){
-	if (maxLength != null) Element.Properties.maxlength = Element.Properties.maxLength = {
-		get: function(){
-			var maxlength = this.getAttribute('maxLength');
-			return maxlength == maxLength ? null : maxlength;
-		}
-	};
-})(document.createElement('input').getAttribute('maxLength'));
-
+/*<!webkit>*/
 Element.Properties.html = (function(){
 
 	var tableTest = Function.attempt(function(){
@@ -3339,10 +3362,26 @@ Element.Properties.html = (function(){
 	};
 	translations.thead = translations.tfoot = translations.tbody;
 
+	/*<ltIE9>*/
+	// technique by jdbarlett - http://jdbartlett.com/innershiv/
+	wrapper.innerHTML = '<nav></nav>';
+	var HTML5Test = wrapper.childNodes.length == 1;
+	if (!HTML5Test){
+		var tags = 'abbr article aside audio canvas datalist details figcaption figure footer header hgroup mark meter nav output progress section summary time video'.split(' '),
+			fragment = document.createDocumentFragment(), l = tags.length;
+		while (l--) fragment.createElement(tags[l]);
+		fragment.appendChild(wrapper);
+	}
+	/*</ltIE9>*/
+
 	var html = {
-		set: function(){
-			var html = Array.flatten(arguments).join('');
+		set: function(html){
+			if (typeOf(html) == 'array') html = html.join('');
+
 			var wrap = (!tableTest && translations[this.get('tag')]);
+			/*<ltIE9>*/
+			if (!wrap && !HTML5Test) wrap = [0, '', ''];
+			/*</ltIE9>*/
 			if (wrap){
 				var first = wrapper;
 				first.innerHTML = wrap[1] + html + wrap[2];
@@ -3358,187 +3397,161 @@ Element.Properties.html = (function(){
 
 	return html;
 })();
+/*</!webkit>*/
+
+/*<ltIE9>*/
+var testForm = document.createElement('form');
+testForm.innerHTML = '<select><option>s</option></select>';
+
+if (testForm.firstChild.value != 's') Element.Properties.value = {
+
+	set: function(value){
+		var tag = this.get('tag');
+		if (tag != 'select') return this.setProperty('value', value);
+		var options = this.getElements('option');
+		for (var i = 0; i < options.length; i++){
+			var option = options[i],
+				attr = option.getAttributeNode('value'),
+				optionValue = (attr && attr.specified) ? option.value : option.get('text');
+			if (optionValue == value) return option.selected = true;
+		}
+	},
+
+	get: function(){
+		var option = this, tag = option.get('tag');
+
+		if (tag != 'select' && tag != 'option') return this.getProperty('value');
+
+		if (tag == 'select' && !(option = option.getSelected()[0])) return '';
+
+		var attr = option.getAttributeNode('value');
+		return (attr && attr.specified) ? option.value : option.get('text');
+	}
+
+};
+/*</ltIE9>*/
+
+})();
 
 
 /*
 ---
 
-name: Element.Style
+name: Event
 
-description: Contains methods for interacting with the styles of Elements in a fashionable way.
+description: Contains the Event Type, to make the event object cross-browser.
 
 license: MIT-style license.
 
-requires: Element
+requires: [Window, Document, Array, Function, String, Object]
 
-provides: Element.Style
+provides: Event
 
 ...
 */
 
-(function(){
+(function() {
 
-var html = document.html;
+var _keys = {};
 
-Element.Properties.styles = {set: function(styles){
-	this.setStyles(styles);
-}};
+var DOMEvent = this.DOMEvent = new Type('DOMEvent', function(event, win){
+	if (!win) win = window;
+	event = event || win.event;
+	if (event.$extended) return event;
+	this.event = event;
+	this.$extended = true;
+	this.shift = event.shiftKey;
+	this.control = event.ctrlKey;
+	this.alt = event.altKey;
+	this.meta = event.metaKey;
+	var type = this.type = event.type;
+	var target = event.target || event.srcElement;
+	while (target && target.nodeType == 3) target = target.parentNode;
+	this.target = document.id(target);
 
-var hasOpacity = (html.style.opacity != null);
-var reAlpha = /alpha\(opacity=([\d.]+)\)/i;
+	if (type.indexOf('key') == 0){
+		var code = this.code = (event.which || event.keyCode);
+		this.key = _keys[code];
+		if (type == 'keydown'){
+			if (code > 111 && code < 124) this.key = 'f' + (code - 111);
+			else if (code > 95 && code < 106) this.key = code - 96;
+		}
+		if (this.key == null) this.key = String.fromCharCode(code).toLowerCase();
+	} else if (type == 'click' || type == 'dblclick' || type == 'contextmenu' || type == 'DOMMouseScroll' || type.indexOf('mouse') == 0){
+		var doc = win.document;
+		doc = (!doc.compatMode || doc.compatMode == 'CSS1Compat') ? doc.html : doc.body;
+		this.page = {
+			x: (event.pageX != null) ? event.pageX : event.clientX + doc.scrollLeft,
+			y: (event.pageY != null) ? event.pageY : event.clientY + doc.scrollTop
+		};
+		this.client = {
+			x: (event.pageX != null) ? event.pageX - win.pageXOffset : event.clientX,
+			y: (event.pageY != null) ? event.pageY - win.pageYOffset : event.clientY
+		};
+		if (type == 'DOMMouseScroll' || type == 'mousewheel')
+			this.wheel = (event.wheelDelta) ? event.wheelDelta / 120 : -(event.detail || 0) / 3;
 
-var setOpacity = function(element, opacity){
-	if (!element.currentStyle || !element.currentStyle.hasLayout) element.style.zoom = 1;
-	if (hasOpacity){
-		element.style.opacity = opacity;
-	} else {
-		opacity = (opacity == 1) ? '' : 'alpha(opacity=' + opacity * 100 + ')';
-		var filter = element.style.filter || element.getComputedStyle('filter') || '';
-		element.style.filter = filter.test(reAlpha) ? filter.replace(reAlpha, opacity) : filter + opacity;
+		this.rightClick = (event.which == 3 || event.button == 2);
+		if (type == 'mouseover' || type == 'mouseout'){
+			var related = event.relatedTarget || event[(type == 'mouseover' ? 'from' : 'to') + 'Element'];
+			while (related && related.nodeType == 3) related = related.parentNode;
+			this.relatedTarget = document.id(related);
+		}
+	} else if (type.indexOf('touch') == 0 || type.indexOf('gesture') == 0){
+		this.rotation = event.rotation;
+		this.scale = event.scale;
+		this.targetTouches = event.targetTouches;
+		this.changedTouches = event.changedTouches;
+		var touches = this.touches = event.touches;
+		if (touches && touches[0]){
+			var touch = touches[0];
+			this.page = {x: touch.pageX, y: touch.pageY};
+			this.client = {x: touch.clientX, y: touch.clientY};
+		}
 	}
-};
 
-Element.Properties.opacity = {
+	if (!this.client) this.client = {};
+	if (!this.page) this.page = {};
+});
 
-	set: function(opacity){
-		var visibility = this.style.visibility;
-		if (opacity == 0 && visibility != 'hidden') this.style.visibility = 'hidden';
-		else if (opacity != 0 && visibility != 'visible') this.style.visibility = 'visible';
+DOMEvent.implement({
 
-		setOpacity(this, opacity);
+	stop: function(){
+		return this.preventDefault().stopPropagation();
 	},
 
-	get: (hasOpacity) ? function(){
-		var opacity = this.style.opacity || this.getComputedStyle('opacity');
-		return (opacity == '') ? 1 : opacity;
-	} : function(){
-		var opacity, filter = (this.style.filter || this.getComputedStyle('filter'));
-		if (filter) opacity = filter.match(reAlpha);
-		return (opacity == null || filter == null) ? 1 : (opacity[1] / 100);
-	}
-
-};
-
-var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat';
-
-Element.implement({
-
-	getComputedStyle: function(property){
-		if (this.currentStyle) return this.currentStyle[property.camelCase()];
-		var defaultView = Element.getDocument(this).defaultView,
-			computed = defaultView ? defaultView.getComputedStyle(this, null) : null;
-		return (computed) ? computed.getPropertyValue((property == floatName) ? 'float' : property.hyphenate()) : null;
-	},
-
-	setOpacity: function(value){
-		setOpacity(this, value);
+	stopPropagation: function(){
+		if (this.event.stopPropagation) this.event.stopPropagation();
+		else this.event.cancelBubble = true;
 		return this;
 	},
 
-	getOpacity: function(){
-		return this.get('opacity');
-	},
-
-	setStyle: function(property, value){
-		switch (property){
-			case 'opacity': return this.set('opacity', parseFloat(value));
-			case 'float': property = floatName;
-		}
-		property = property.camelCase();
-		if (typeOf(value) != 'string'){
-			var map = (Element.Styles[property] || '@').split(' ');
-			value = Array.from(value).map(function(val, i){
-				if (!map[i]) return '';
-				return (typeOf(val) == 'number') ? map[i].replace('@', Math.round(val)) : val;
-			}).join(' ');
-		} else if (value == String(Number(value))){
-			value = Math.round(value);
-		}
-		this.style[property] = value;
+	preventDefault: function(){
+		if (this.event.preventDefault) this.event.preventDefault();
+		else this.event.returnValue = false;
 		return this;
-	},
-
-	getStyle: function(property){
-		switch (property){
-			case 'opacity': return this.get('opacity');
-			case 'float': property = floatName;
-		}
-		property = property.camelCase();
-		var result = this.style[property];
-		if (!result || property == 'zIndex'){
-			result = [];
-			for (var style in Element.ShortStyles){
-				if (property != style) continue;
-				for (var s in Element.ShortStyles[style]) result.push(this.getStyle(s));
-				return result.join(' ');
-			}
-			result = this.getComputedStyle(property);
-		}
-		if (result){
-			result = String(result);
-			var color = result.match(/rgba?\([\d\s,]+\)/);
-			if (color) result = result.replace(color[0], color[0].rgbToHex());
-		}
-		if (Browser.opera || (Browser.ie && isNaN(parseFloat(result)))){
-			if (property.test(/^(height|width)$/)){
-				var values = (property == 'width') ? ['left', 'right'] : ['top', 'bottom'], size = 0;
-				values.each(function(value){
-					size += this.getStyle('border-' + value + '-width').toInt() + this.getStyle('padding-' + value).toInt();
-				}, this);
-				return this['offset' + property.capitalize()] - size + 'px';
-			}
-			if (Browser.opera && String(result).indexOf('px') != -1) return result;
-			if (property.test(/(border(.+)Width|margin|padding)/)) return '0px';
-		}
-		return result;
-	},
-
-	setStyles: function(styles){
-		for (var style in styles) this.setStyle(style, styles[style]);
-		return this;
-	},
-
-	getStyles: function(){
-		var result = {};
-		Array.flatten(arguments).each(function(key){
-			result[key] = this.getStyle(key);
-		}, this);
-		return result;
 	}
 
 });
 
-Element.Styles = {
-	left: '@px', top: '@px', bottom: '@px', right: '@px',
-	width: '@px', height: '@px', maxWidth: '@px', maxHeight: '@px', minWidth: '@px', minHeight: '@px',
-	backgroundColor: 'rgb(@, @, @)', backgroundPosition: '@px @px', color: 'rgb(@, @, @)',
-	fontSize: '@px', letterSpacing: '@px', lineHeight: '@px', clip: 'rect(@px @px @px @px)',
-	margin: '@px @px @px @px', padding: '@px @px @px @px', border: '@px @ rgb(@, @, @) @px @ rgb(@, @, @) @px @ rgb(@, @, @)',
-	borderWidth: '@px @px @px @px', borderStyle: '@ @ @ @', borderColor: 'rgb(@, @, @) rgb(@, @, @) rgb(@, @, @) rgb(@, @, @)',
-	zIndex: '@', 'zoom': '@', fontWeight: '@', textIndent: '@px', opacity: '@'
+DOMEvent.defineKey = function(code, key){
+	_keys[code] = key;
+	return this;
 };
 
+DOMEvent.defineKeys = DOMEvent.defineKey.overloadSetter(true);
 
-
-Element.ShortStyles = {margin: {}, padding: {}, border: {}, borderWidth: {}, borderStyle: {}, borderColor: {}};
-
-['Top', 'Right', 'Bottom', 'Left'].each(function(direction){
-	var Short = Element.ShortStyles;
-	var All = Element.Styles;
-	['margin', 'padding'].each(function(style){
-		var sd = style + direction;
-		Short[style][sd] = All[sd] = '@px';
-	});
-	var bd = 'border' + direction;
-	Short.border[bd] = All[bd] = '@px @ rgb(@, @, @)';
-	var bdw = bd + 'Width', bds = bd + 'Style', bdc = bd + 'Color';
-	Short[bd] = {};
-	Short.borderWidth[bdw] = Short[bd][bdw] = All[bdw] = '@px';
-	Short.borderStyle[bds] = Short[bd][bds] = All[bds] = '@';
-	Short.borderColor[bdc] = Short[bd][bdc] = All[bdc] = 'rgb(@, @, @)';
+DOMEvent.defineKeys({
+	'38': 'up', '40': 'down', '37': 'left', '39': 'right',
+	'27': 'esc', '32': 'space', '8': 'backspace', '9': 'tab',
+	'46': 'delete', '13': 'enter'
 });
 
 })();
+
+
+
+
 
 
 /*
@@ -3575,14 +3588,14 @@ Element.Properties.events = {set: function(events){
 			condition = fn,
 			self = this;
 		if (custom){
-			if (custom.onAdd) custom.onAdd.call(this, fn);
+			if (custom.onAdd) custom.onAdd.call(this, fn, type);
 			if (custom.condition){
 				condition = function(event){
-					if (custom.condition.call(this, event)) return fn.call(this, event);
+					if (custom.condition.call(this, event, type)) return fn.call(this, event);
 					return true;
 				};
 			}
-			realType = custom.base || realType;
+			if (custom.base) realType = Function.from(custom.base).call(this, type);
 		}
 		var defn = function(){
 			return fn.call(self);
@@ -3591,11 +3604,11 @@ Element.Properties.events = {set: function(events){
 		if (nativeEvent){
 			if (nativeEvent == 2){
 				defn = function(event){
-					event = new Event(event, self.getWindow());
+					event = new DOMEvent(event, self.getWindow());
 					if (condition.call(self, event) === false) event.stop();
 				};
 			}
-			this.addListener(realType, defn);
+			this.addListener(realType, defn, arguments[2]);
 		}
 		events[type].values.push(defn);
 		return this;
@@ -3612,10 +3625,10 @@ Element.Properties.events = {set: function(events){
 		delete list.values[index];
 		var custom = Element.Events[type];
 		if (custom){
-			if (custom.onRemove) custom.onRemove.call(this, fn);
-			type = custom.base || type;
+			if (custom.onRemove) custom.onRemove.call(this, fn, type);
+			if (custom.base) type = Function.from(custom.base).call(this, type);
 		}
-		return (Element.NativeEvents[type]) ? this.removeListener(type, value) : this;
+		return (Element.NativeEvents[type]) ? this.removeListener(type, value, arguments[2]) : this;
 	},
 
 	addEvents: function(events){
@@ -3671,12 +3684,6 @@ Element.Properties.events = {set: function(events){
 
 });
 
-// IE9
-try {
-	if (typeof HTMLElement != 'undefined')
-		HTMLElement.prototype.fireEvent = Element.prototype.fireEvent;
-} catch(e){}
-
 Element.NativeEvents = {
 	click: 2, dblclick: 2, mouseup: 2, mousedown: 2, contextmenu: 2, //mouse buttons
 	mousewheel: 2, DOMMouseScroll: 2, //mouse wheel
@@ -3685,7 +3692,7 @@ Element.NativeEvents = {
 	orientationchange: 2, // mobile
 	touchstart: 2, touchmove: 2, touchend: 2, touchcancel: 2, // touch
 	gesturestart: 2, gesturechange: 2, gestureend: 2, // gesture
-	focus: 2, blur: 2, change: 2, reset: 2, select: 2, submit: 2, //form elements
+	focus: 2, blur: 2, change: 2, reset: 2, select: 2, submit: 2, paste: 2, input: 2, //form elements
 	load: 2, unload: 1, beforeunload: 2, resize: 1, move: 1, DOMContentLoaded: 1, readystatechange: 1, //window
 	error: 1, abort: 1, scroll: 1 //misc
 };
@@ -3715,7 +3722,191 @@ Element.Events = {
 
 };
 
+/*<ltIE9>*/
+if (!window.addEventListener){
+	Element.NativeEvents.propertychange = 2;
+	Element.Events.change = {
+		base: function(){
+			var type = this.type;
+			return (this.get('tag') == 'input' && (type == 'radio' || type == 'checkbox')) ? 'propertychange' : 'change'
+		},
+		condition: function(event){
+			return !!(this.type != 'radio' || this.checked);
+		}
+	}
+}
+/*</ltIE9>*/
 
+
+
+})();
+
+
+/*
+---
+
+name: Element.Style
+
+description: Contains methods for interacting with the styles of Elements in a fashionable way.
+
+license: MIT-style license.
+
+requires: Element
+
+provides: Element.Style
+
+...
+*/
+
+(function(){
+
+var html = document.html;
+
+Element.Properties.styles = {set: function(styles){
+	this.setStyles(styles);
+}};
+
+var hasOpacity = (html.style.opacity != null),
+	hasFilter = (html.style.filter != null),
+	reAlpha = /alpha\(opacity=([\d.]+)\)/i;
+
+var setVisibility = function(element, opacity){
+	element.store('$opacity', opacity);
+	element.style.visibility = opacity > 0 ? 'visible' : 'hidden';
+};
+
+var setOpacity = (hasOpacity ? function(element, opacity){
+	element.style.opacity = opacity;
+} : (hasFilter ? function(element, opacity){
+	if (!element.currentStyle || !element.currentStyle.hasLayout) element.style.zoom = 1;
+	opacity = (opacity * 100).limit(0, 100).round();
+	opacity = (opacity == 100) ? '' : 'alpha(opacity=' + opacity + ')';
+	var filter = element.style.filter || element.getComputedStyle('filter') || '';
+	element.style.filter = reAlpha.test(filter) ? filter.replace(reAlpha, opacity) : filter + opacity;
+} : setVisibility));
+
+var getOpacity = (hasOpacity ? function(element){
+	var opacity = element.style.opacity || element.getComputedStyle('opacity');
+	return (opacity == '') ? 1 : opacity.toFloat();
+} : (hasFilter ? function(element){
+	var filter = (element.style.filter || element.getComputedStyle('filter')),
+		opacity;
+	if (filter) opacity = filter.match(reAlpha);
+	return (opacity == null || filter == null) ? 1 : (opacity[1] / 100);
+} : function(element){
+	var opacity = element.retrieve('$opacity');
+	if (opacity == null) opacity = (element.style.visibility == 'hidden' ? 0 : 1);
+	return opacity;
+}));
+
+var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat';
+
+Element.implement({
+
+	getComputedStyle: function(property){
+		if (this.currentStyle) return this.currentStyle[property.camelCase()];
+		var defaultView = Element.getDocument(this).defaultView,
+			computed = defaultView ? defaultView.getComputedStyle(this, null) : null;
+		return (computed) ? computed.getPropertyValue((property == floatName) ? 'float' : property.hyphenate()) : null;
+	},
+
+	setStyle: function(property, value){
+		if (property == 'opacity'){
+			setOpacity(this, parseFloat(value));
+			return this;
+		}
+		property = (property == 'float' ? floatName : property).camelCase();
+		if (typeOf(value) != 'string'){
+			var map = (Element.Styles[property] || '@').split(' ');
+			value = Array.from(value).map(function(val, i){
+				if (!map[i]) return '';
+				return (typeOf(val) == 'number') ? map[i].replace('@', Math.round(val)) : val;
+			}).join(' ');
+		} else if (value == String(Number(value))){
+			value = Math.round(value);
+		}
+		this.style[property] = value;
+		return this;
+	},
+
+	getStyle: function(property){
+		if (property == 'opacity') return getOpacity(this);
+		property = (property == 'float' ? floatName : property).camelCase();
+		var result = this.style[property];
+		if (!result || property == 'zIndex'){
+			result = [];
+			for (var style in Element.ShortStyles){
+				if (property != style) continue;
+				for (var s in Element.ShortStyles[style]) result.push(this.getStyle(s));
+				return result.join(' ');
+			}
+			result = this.getComputedStyle(property);
+		}
+		if (result){
+			result = String(result);
+			var color = result.match(/rgba?\([\d\s,]+\)/);
+			if (color) result = result.replace(color[0], color[0].rgbToHex());
+		}
+		if (Browser.opera || (Browser.ie && isNaN(parseFloat(result)))){
+			if ((/^(height|width)$/).test(property)){
+				var values = (property == 'width') ? ['left', 'right'] : ['top', 'bottom'], size = 0;
+				values.each(function(value){
+					size += this.getStyle('border-' + value + '-width').toInt() + this.getStyle('padding-' + value).toInt();
+				}, this);
+				return this['offset' + property.capitalize()] - size + 'px';
+			}
+			if (Browser.opera && String(result).indexOf('px') != -1) return result;
+			if ((/^border(.+)Width|margin|padding/).test(property)) return '0px';
+		}
+		return result;
+	},
+
+	setStyles: function(styles){
+		for (var style in styles) this.setStyle(style, styles[style]);
+		return this;
+	},
+
+	getStyles: function(){
+		var result = {};
+		Array.flatten(arguments).each(function(key){
+			result[key] = this.getStyle(key);
+		}, this);
+		return result;
+	}
+
+});
+
+Element.Styles = {
+	left: '@px', top: '@px', bottom: '@px', right: '@px',
+	width: '@px', height: '@px', maxWidth: '@px', maxHeight: '@px', minWidth: '@px', minHeight: '@px',
+	backgroundColor: 'rgb(@, @, @)', backgroundPosition: '@px @px', color: 'rgb(@, @, @)',
+	fontSize: '@px', letterSpacing: '@px', lineHeight: '@px', clip: 'rect(@px @px @px @px)',
+	margin: '@px @px @px @px', padding: '@px @px @px @px', border: '@px @ rgb(@, @, @) @px @ rgb(@, @, @) @px @ rgb(@, @, @)',
+	borderWidth: '@px @px @px @px', borderStyle: '@ @ @ @', borderColor: 'rgb(@, @, @) rgb(@, @, @) rgb(@, @, @) rgb(@, @, @)',
+	zIndex: '@', 'zoom': '@', fontWeight: '@', textIndent: '@px', opacity: '@'
+};
+
+
+
+
+
+Element.ShortStyles = {margin: {}, padding: {}, border: {}, borderWidth: {}, borderStyle: {}, borderColor: {}};
+
+['Top', 'Right', 'Bottom', 'Left'].each(function(direction){
+	var Short = Element.ShortStyles;
+	var All = Element.Styles;
+	['margin', 'padding'].each(function(style){
+		var sd = style + direction;
+		Short[style][sd] = All[sd] = '@px';
+	});
+	var bd = 'border' + direction;
+	Short.border[bd] = All[bd] = '@px @ rgb(@, @, @)';
+	var bdw = bd + 'Width', bds = bd + 'Style', bdc = bd + 'Color';
+	Short[bd] = {};
+	Short.borderWidth[bdw] = Short[bd][bdw] = All[bdw] = '@px';
+	Short.borderStyle[bds] = Short[bd][bds] = All[bds] = '@';
+	Short.borderColor[bdc] = Short[bd][bdc] = All[bdc] = 'rgb(@, @, @)';
+});
 
 })();
 
@@ -3741,6 +3932,21 @@ provides: [Element.Dimensions]
 */
 
 (function(){
+
+var element = document.createElement('div'),
+	child = document.createElement('div');
+element.style.height = '0';
+element.appendChild(child);
+var brokenOffsetParent = (child.offsetParent === element);
+element = child = null;
+
+var isOffset = function(el){
+	return styleString(el, 'position') != 'static' || isBody(el);
+};
+
+var isOffsetStatic = function(el){
+	return isOffset(el) || (/^(?:table|td|th)$/i).test(el.tagName);
+};
 
 Element.implement({
 
@@ -3779,13 +3985,22 @@ Element.implement({
 		return position;
 	},
 
-	getOffsetParent: function(){
+	getOffsetParent: brokenOffsetParent ? function(){
 		var element = this;
-		if (isBody(element)) return null;
-		if (!Browser.ie) return element.offsetParent;
+		if (isBody(element) || styleString(element, 'position') == 'fixed') return null;
+
+		var isOffsetCheck = (styleString(element, 'position') == 'static') ? isOffsetStatic : isOffset;
 		while ((element = element.parentNode)){
-			if (styleString(element, 'position') != 'static' || isBody(element)) return element;
+			if (isOffsetCheck(element)) return element;
 		}
+		return null;
+	} : function(){
+		var element = this;
+		if (isBody(element) || styleString(element, 'position') == 'fixed') return null;
+
+		try {
+			return element.offsetParent;
+		} catch(e) {}
 		return null;
 	},
 
@@ -3835,14 +4050,13 @@ Element.implement({
 	},
 
 	getPosition: function(relative){
-		if (isBody(this)) return {x: 0, y: 0};
 		var offset = this.getOffsets(),
 			scroll = this.getScrolls();
 		var position = {
 			x: offset.x - scroll.x,
 			y: offset.y - scroll.y
 		};
-		
+
 		if (relative && (relative = document.id(relative))){
 			var relativePosition = relative.getPosition();
 			return {x: position.x - relativePosition.x - leftBorder(relative), y: position.y - relativePosition.y - topBorder(relative)};
@@ -3916,28 +4130,28 @@ var styleString = Element.getComputedStyle;
 
 function styleNumber(element, style){
 	return styleString(element, style).toInt() || 0;
-};
+}
 
 function borderBox(element){
 	return styleString(element, '-moz-box-sizing') == 'border-box';
-};
+}
 
 function topBorder(element){
 	return styleNumber(element, 'border-top-width');
-};
+}
 
 function leftBorder(element){
 	return styleNumber(element, 'border-left-width');
-};
+}
 
 function isBody(element){
 	return (/^(?:body|html)$/i).test(element.tagName);
-};
+}
 
 function getCompatElement(element){
 	var doc = element.getDocument();
 	return (!doc.compatMode || doc.compatMode == 'CSS1Compat') ? doc.html : doc.body;
-};
+}
 
 })();
 
@@ -4009,9 +4223,11 @@ var Fx = this.Fx = new Class({
 		onCancel: nil,
 		onComplete: nil,
 		*/
-		fps: 50,
+		fps: 60,
 		unit: false,
 		duration: 500,
+		frames: null,
+		frameSkip: true,
 		link: 'ignore'
 	},
 
@@ -4026,14 +4242,22 @@ var Fx = this.Fx = new Class({
 		};
 	},
 
-	step: function(){
-		var time = Date.now();
-		if (time < this.time + this.options.duration){
-			var delta = this.transition((time - this.time) / this.options.duration);
+	step: function(now){
+		if (this.options.frameSkip){
+			var diff = (this.time != null) ? (now - this.time) : 0, frames = diff / this.frameInterval;
+			this.time = now;
+			this.frame += frames;
+		} else {
+			this.frame++;
+		}
+
+		if (this.frame < this.frames){
+			var delta = this.transition(this.frame / this.frames);
 			this.set(this.compute(this.from, this.to, delta));
 		} else {
+			this.frame = this.frames;
 			this.set(this.compute(this.from, this.to, 1));
-			this.complete();
+			this.stop();
 		}
 	},
 
@@ -4046,7 +4270,7 @@ var Fx = this.Fx = new Class({
 	},
 
 	check: function(){
-		if (!this.timer) return true;
+		if (!this.isRunning()) return true;
 		switch (this.options.link){
 			case 'cancel': this.cancel(); return true;
 			case 'chain': this.chain(this.caller.pass(arguments, this)); return false;
@@ -4056,62 +4280,60 @@ var Fx = this.Fx = new Class({
 
 	start: function(from, to){
 		if (!this.check(from, to)) return this;
-		var duration = this.options.duration;
-		this.options.duration = Fx.Durations[duration] || duration.toInt();
 		this.from = from;
 		this.to = to;
-		this.time = 0;
+		this.frame = (this.options.frameSkip) ? 0 : -1;
+		this.time = null;
 		this.transition = this.getTransition();
-		this.startTimer();
-		this.onStart();
+		var frames = this.options.frames, fps = this.options.fps, duration = this.options.duration;
+		this.duration = Fx.Durations[duration] || duration.toInt();
+		this.frameInterval = 1000 / fps;
+		this.frames = frames || Math.round(this.duration / this.frameInterval);
+		this.fireEvent('start', this.subject);
+		pushInstance.call(this, fps);
 		return this;
 	},
 
-	complete: function(){
-		if (this.stopTimer()) this.onComplete();
+	stop: function(){
+		if (this.isRunning()){
+			this.time = null;
+			pullInstance.call(this, this.options.fps);
+			if (this.frames == this.frame){
+				this.fireEvent('complete', this.subject);
+				if (!this.callChain()) this.fireEvent('chainComplete', this.subject);
+			} else {
+				this.fireEvent('stop', this.subject);
+			}
+		}
 		return this;
 	},
 
 	cancel: function(){
-		if (this.stopTimer()) this.onCancel();
+		if (this.isRunning()){
+			this.time = null;
+			pullInstance.call(this, this.options.fps);
+			this.frame = this.frames;
+			this.fireEvent('cancel', this.subject).clearChain();
+		}
 		return this;
 	},
 
-	onStart: function(){
-		this.fireEvent('start', this.subject);
-	},
-
-	onComplete: function(){
-		this.fireEvent('complete', this.subject);
-		if (!this.callChain()) this.fireEvent('chainComplete', this.subject);
-	},
-
-	onCancel: function(){
-		this.fireEvent('cancel', this.subject).clearChain();
-	},
-
 	pause: function(){
-		this.stopTimer();
+		if (this.isRunning()){
+			this.time = null;
+			pullInstance.call(this, this.options.fps);
+		}
 		return this;
 	},
 
 	resume: function(){
-		this.startTimer();
+		if ((this.frame < this.frames) && !this.isRunning()) pushInstance.call(this, this.options.fps);
 		return this;
 	},
 
-	stopTimer: function(){
-		if (!this.timer) return false;
-		this.time = Date.now() - this.time;
-		this.timer = removeInstance(this);
-		return true;
-	},
-
-	startTimer: function(){
-		if (this.timer) return false;
-		this.time = Date.now() - this.time;
-		this.timer = addInstance(this);
-		return true;
+	isRunning: function(){
+		var list = instances[this.options.fps];
+		return list && list.contains(this);
 	}
 
 });
@@ -4127,25 +4349,28 @@ Fx.Durations = {'short': 250, 'normal': 500, 'long': 1000};
 var instances = {}, timers = {};
 
 var loop = function(){
+	var now = Date.now();
 	for (var i = this.length; i--;){
-		if (this[i]) this[i].step();
+		var instance = this[i];
+		if (instance) instance.step(now);
 	}
 };
 
-var addInstance = function(instance){
-	var fps = instance.options.fps,
-		list = instances[fps] || (instances[fps] = []);
-	list.push(instance);
+var pushInstance = function(fps){
+	var list = instances[fps] || (instances[fps] = []);
+	list.push(this);
 	if (!timers[fps]) timers[fps] = loop.periodical(Math.round(1000 / fps), list);
-	return true;
 };
 
-var removeInstance = function(instance){
-	var fps = instance.options.fps,
-		list = instances[fps] || [];
-	list.erase(instance);
-	if (!list.length && timers[fps]) timers[fps] = clearInterval(timers[fps]);
-	return false;
+var pullInstance = function(fps){
+	var list = instances[fps];
+	if (list){
+		list.erase(this);
+		if (!list.length && timers[fps]){
+			delete instances[fps];
+			timers[fps] = clearInterval(timers[fps]);
+		}
+	}
 };
 
 })();
@@ -4233,7 +4458,7 @@ Fx.CSS = new Class({
 
 	search: function(selector){
 		if (Fx.CSS.Cache[selector]) return Fx.CSS.Cache[selector];
-		var to = {};
+		var to = {}, selectorTest = new RegExp('^' + selector.escapeRegExp() + '$');
 		Array.each(document.styleSheets, function(sheet, j){
 			var href = sheet.href;
 			if (href && href.contains('://') && !href.contains(document.domain)) return;
@@ -4243,11 +4468,11 @@ Fx.CSS = new Class({
 				var selectorText = (rule.selectorText) ? rule.selectorText.replace(/^\w+/, function(m){
 					return m.toLowerCase();
 				}) : null;
-				if (!selectorText || !selectorText.test('^' + selector + '$')) return;
-				Element.Styles.each(function(value, style){
+				if (!selectorText || !selectorTest.test(selectorText)) return;
+				Object.each(Element.Styles, function(value, style){
 					if (!rule.style[style] || Element.ShortStyles[style]) return;
 					value = String(rule.style[style]);
-					to[style] = (value.test(/^rgb/)) ? value.rgbToHex() : value;
+					to[style] = ((/^rgb/).test(value)) ? value.rgbToHex() : value;
 				});
 			});
 		});
@@ -4363,27 +4588,33 @@ Element.Properties.tween = {
 Element.implement({
 
 	tween: function(property, from, to){
-		this.get('tween').start(arguments);
+		this.get('tween').start(property, from, to);
 		return this;
 	},
 
 	fade: function(how){
-		var fade = this.get('tween'), o = 'opacity', toggle;
-		how = [how, 'toggle'].pick();
+		var fade = this.get('tween'), method, to, toggle;
+		if (how == null) how = 'toggle';
 		switch (how){
-			case 'in': fade.start(o, 1); break;
-			case 'out': fade.start(o, 0); break;
-			case 'show': fade.set(o, 1); break;
-			case 'hide': fade.set(o, 0); break;
+			case 'in': method = 'start'; to = 1; break;
+			case 'out': method = 'start'; to = 0; break;
+			case 'show': method = 'set'; to = 1; break;
+			case 'hide': method = 'set'; to = 0; break;
 			case 'toggle':
-				var flag = this.retrieve('fade:flag', this.get('opacity') == 1);
-				fade.start(o, (flag) ? 0 : 1);
+				var flag = this.retrieve('fade:flag', this.getStyle('opacity') == 1);
+				method = 'start';
+				to = flag ? 0 : 1;
 				this.store('fade:flag', !flag);
 				toggle = true;
 			break;
-			default: fade.start(o, arguments);
+			default: method = 'start'; to = how;
 		}
 		if (!toggle) this.eliminate('fade:flag');
+		fade[method]('opacity', to);
+		if (method == 'set' || to != 0) this.setStyle('visibility', to == 0 ? 'hidden' : 'visible');
+		else fade.chain(function(){
+			this.element.setStyle('visibility', 'hidden');
+		});
 		return this;
 	},
 
@@ -4406,463 +4637,199 @@ Element.implement({
 /*
 ---
 
-name: Fx.Morph
+name: Element.Delegation
 
-description: Formerly Fx.Styles, effect to transition any number of CSS properties for an element using an object of rules, or CSS based selector rules.
-
-license: MIT-style license.
-
-requires: Fx.CSS
-
-provides: Fx.Morph
-
-...
-*/
-
-Fx.Morph = new Class({
-
-	Extends: Fx.CSS,
-
-	initialize: function(element, options){
-		this.element = this.subject = document.id(element);
-		this.parent(options);
-	},
-
-	set: function(now){
-		if (typeof now == 'string') now = this.search(now);
-		for (var p in now) this.render(this.element, p, now[p], this.options.unit);
-		return this;
-	},
-
-	compute: function(from, to, delta){
-		var now = {};
-		for (var p in from) now[p] = this.parent(from[p], to[p], delta);
-		return now;
-	},
-
-	start: function(properties){
-		if (!this.check(properties)) return this;
-		if (typeof properties == 'string') properties = this.search(properties);
-		var from = {}, to = {};
-		for (var p in properties){
-			var parsed = this.prepare(this.element, p, properties[p]);
-			from[p] = parsed.from;
-			to[p] = parsed.to;
-		}
-		return this.parent(from, to);
-	}
-
-});
-
-Element.Properties.morph = {
-
-	set: function(options){
-		this.get('morph').cancel().setOptions(options);
-		return this;
-	},
-
-	get: function(){
-		var morph = this.retrieve('morph');
-		if (!morph){
-			morph = new Fx.Morph(this, {link: 'cancel'});
-			this.store('morph', morph);
-		}
-		return morph;
-	}
-
-};
-
-Element.implement({
-
-	morph: function(props){
-		this.get('morph').start(props);
-		return this;
-	}
-
-});
-
-
-/*
----
-
-name: Fx.Transitions
-
-description: Contains a set of advanced transitions to be used with any of the Fx Classes.
+description: Extends the Element native object to include the delegate method for more efficient event management.
 
 license: MIT-style license.
 
-credits:
-  - Easing Equations by Robert Penner, <http://www.robertpenner.com/easing/>, modified and optimized to be used with MooTools.
+requires: [Element.Event]
 
-requires: Fx
-
-provides: Fx.Transitions
-
-...
-*/
-
-Fx.implement({
-
-	getTransition: function(){
-		var trans = this.options.transition || Fx.Transitions.Sine.easeInOut;
-		if (typeof trans == 'string'){
-			var data = trans.split(':');
-			trans = Fx.Transitions;
-			trans = trans[data[0]] || trans[data[0].capitalize()];
-			if (data[1]) trans = trans['ease' + data[1].capitalize() + (data[2] ? data[2].capitalize() : '')];
-		}
-		return trans;
-	}
-
-});
-
-Fx.Transition = function(transition, params){
-	params = Array.from(params);
-	return Object.append(transition, {
-		easeIn: function(pos){
-			return transition(pos, params);
-		},
-		easeOut: function(pos){
-			return 1 - transition(1 - pos, params);
-		},
-		easeInOut: function(pos){
-			return (pos <= 0.5) ? transition(2 * pos, params) / 2 : (2 - transition(2 * (1 - pos), params)) / 2;
-		}
-	});
-};
-
-Fx.Transitions = {
-
-	linear: function(zero){
-		return zero;
-	}
-
-};
-
-
-
-Fx.Transitions.extend = function(transitions){
-	for (var transition in transitions) Fx.Transitions[transition] = new Fx.Transition(transitions[transition]);
-};
-
-Fx.Transitions.extend({
-
-	Pow: function(p, x){
-		return Math.pow(p, x && x[0] || 6);
-	},
-
-	Expo: function(p){
-		return Math.pow(2, 8 * (p - 1));
-	},
-
-	Circ: function(p){
-		return 1 - Math.sin(Math.acos(p));
-	},
-
-	Sine: function(p){
-		return 1 - Math.sin((1 - p) * Math.PI / 2);
-	},
-
-	Back: function(p, x){
-		x = x && x[0] || 1.618;
-		return Math.pow(p, 2) * ((x + 1) * p - x);
-	},
-
-	Bounce: function(p){
-		var value;
-		for (var a = 0, b = 1; 1; a += b, b /= 2){
-			if (p >= (7 - 4 * a) / 11){
-				value = b * b - Math.pow((11 - 6 * a - 11 * p) / 4, 2);
-				break;
-			}
-		}
-		return value;
-	},
-
-	Elastic: function(p, x){
-		return Math.pow(2, 10 * --p) * Math.cos(20 * p * Math.PI * (x && x[0] || 1) / 3);
-	}
-
-});
-
-['Quad', 'Cubic', 'Quart', 'Quint'].each(function(transition, i){
-	Fx.Transitions[transition] = new Fx.Transition(function(p){
-		return Math.pow(p, [i + 2]);
-	});
-});
-
-
-/*
----
-
-name: Request
-
-description: Powerful all purpose Request Class. Uses XMLHTTPRequest.
-
-license: MIT-style license.
-
-requires: [Object, Element, Chain, Events, Options, Browser]
-
-provides: Request
+provides: [Element.Delegation]
 
 ...
 */
 
 (function(){
 
-var progressSupport = ('onprogress' in new Browser.Request);
+var eventListenerSupport = !!window.addEventListener;
 
-var Request = this.Request = new Class({
+Element.NativeEvents.focusin = Element.NativeEvents.focusout = 2;
 
-	Implements: [Chain, Events, Options],
-
-	options: {/*
-		onRequest: function(){},
-		onLoadstart: function(event, xhr){},
-		onProgress: function(event, xhr){},
-		onComplete: function(){},
-		onCancel: function(){},
-		onSuccess: function(responseText, responseXML){},
-		onFailure: function(xhr){},
-		onException: function(headerName, value){},
-		onTimeout: function(){},
-		user: '',
-		password: '',*/
-		url: '',
-		data: '',
-		headers: {
-			'X-Requested-With': 'XMLHttpRequest',
-			'Accept': 'text/javascript, text/html, application/xml, text/xml, */*'
-		},
-		async: true,
-		format: false,
-		method: 'post',
-		link: 'ignore',
-		isSuccess: null,
-		emulation: true,
-		urlEncoded: true,
-		encoding: 'utf-8',
-		evalScripts: false,
-		evalResponse: false,
-		timeout: 0,
-		noCache: false
-	},
-
-	initialize: function(options){
-		this.xhr = new Browser.Request();
-		this.setOptions(options);
-		this.headers = this.options.headers;
-	},
-
-	onStateChange: function(){
-		var xhr = this.xhr;
-		if (xhr.readyState != 4 || !this.running) return;
-		this.running = false;
-		this.status = 0;
-		Function.attempt(function(){
-			var status = xhr.status;
-			this.status = (status == 1223) ? 204 : status;
-		}.bind(this));
-		xhr.onreadystatechange = function(){};
-		clearTimeout(this.timer);
-		
-		this.response = {text: this.xhr.responseText || '', xml: this.xhr.responseXML};
-		if (this.options.isSuccess.call(this, this.status))
-			this.success(this.response.text, this.response.xml);
-		else
-			this.failure();
-	},
-
-	isSuccess: function(){
-		var status = this.status;
-		return (status >= 200 && status < 300);
-	},
-
-	isRunning: function(){
-		return !!this.running;
-	},
-
-	processScripts: function(text){
-		if (this.options.evalResponse || (/(ecma|java)script/).test(this.getHeader('Content-type'))) return Browser.exec(text);
-		return text.stripScripts(this.options.evalScripts);
-	},
-
-	success: function(text, xml){
-		this.onSuccess(this.processScripts(text), xml);
-	},
-
-	onSuccess: function(){
-		this.fireEvent('complete', arguments).fireEvent('success', arguments).callChain();
-	},
-
-	failure: function(){
-		this.onFailure();
-	},
-
-	onFailure: function(){
-		this.fireEvent('complete').fireEvent('failure', this.xhr);
-	},
-	
-	loadstart: function(event){
-		this.fireEvent('loadstart', [event, this.xhr]);
-	},
-	
-	progress: function(event){
-		this.fireEvent('progress', [event, this.xhr]);
-	},
-	
-	timeout: function(){
-		this.fireEvent('timeout', this.xhr);
-	},
-
-	setHeader: function(name, value){
-		this.headers[name] = value;
-		return this;
-	},
-
-	getHeader: function(name){
-		return Function.attempt(function(){
-			return this.xhr.getResponseHeader(name);
-		}.bind(this));
-	},
-
-	check: function(){
-		if (!this.running) return true;
-		switch (this.options.link){
-			case 'cancel': this.cancel(); return true;
-			case 'chain': this.chain(this.caller.pass(arguments, this)); return false;
-		}
-		return false;
-	},
-	
-	send: function(options){
-		if (!this.check(options)) return this;
-
-		this.options.isSuccess = this.options.isSuccess || this.isSuccess;
-		this.running = true;
-
-		var type = typeOf(options);
-		if (type == 'string' || type == 'element') options = {data: options};
-
-		var old = this.options;
-		options = Object.append({data: old.data, url: old.url, method: old.method}, options);
-		var data = options.data, url = String(options.url), method = options.method.toLowerCase();
-
-		switch (typeOf(data)){
-			case 'element': data = document.id(data).toQueryString(); break;
-			case 'object': case 'hash': data = Object.toQueryString(data);
-		}
-
-		if (this.options.format){
-			var format = 'format=' + this.options.format;
-			data = (data) ? format + '&' + data : format;
-		}
-
-		if (this.options.emulation && !['get', 'post'].contains(method)){
-			var _method = '_method=' + method;
-			data = (data) ? _method + '&' + data : _method;
-			method = 'post';
-		}
-
-		if (this.options.urlEncoded && ['post', 'put'].contains(method)){
-			var encoding = (this.options.encoding) ? '; charset=' + this.options.encoding : '';
-			this.headers['Content-type'] = 'application/x-www-form-urlencoded' + encoding;
-		}
-
-		if (!url) url = document.location.pathname;
-		
-		var trimPosition = url.lastIndexOf('/');
-		if (trimPosition > -1 && (trimPosition = url.indexOf('#')) > -1) url = url.substr(0, trimPosition);
-
-		if (this.options.noCache)
-			url += (url.contains('?') ? '&' : '?') + String.uniqueID();
-
-		if (data && method == 'get'){
-			url += (url.contains('?') ? '&' : '?') + data;
-			data = null;
-		}
-
-		var xhr = this.xhr;
-		if (progressSupport){
-			xhr.onloadstart = this.loadstart.bind(this);
-			xhr.onprogress = this.progress.bind(this);
-		}
-
-		xhr.open(method.toUpperCase(), url, this.options.async, this.options.user, this.options.password);
-		if (this.options.user && 'withCredentials' in xhr) xhr.withCredentials = true;
-		
-		xhr.onreadystatechange = this.onStateChange.bind(this);
-
-		Object.each(this.headers, function(value, key){
-			try {
-				xhr.setRequestHeader(key, value);
-			} catch (e){
-				this.fireEvent('exception', [key, value]);
-			}
-		}, this);
-
-		this.fireEvent('request');
-		xhr.send(data);
-		if (!this.options.async) this.onStateChange();
-		if (this.options.timeout) this.timer = this.timeout.delay(this.options.timeout, this);
-		return this;
-	},
-
-	cancel: function(){
-		if (!this.running) return this;
-		this.running = false;
-		var xhr = this.xhr;
-		xhr.abort();
-		clearTimeout(this.timer);
-		xhr.onreadystatechange = xhr.onprogress = xhr.onloadstart = function(){};
-		this.xhr = new Browser.Request();
-		this.fireEvent('cancel');
-		return this;
+var bubbleUp = function(self, match, fn, event, target){
+	while (target && target != self){
+		if (match(target, event)) return fn.call(target, event, target);
+		target = document.id(target.parentNode);
 	}
+};
 
-});
+var map = {
+	mouseenter: {
+		base: 'mouseover'
+	},
+	mouseleave: {
+		base: 'mouseout'
+	},
+	focus: {
+		base: 'focus' + (eventListenerSupport ? '' : 'in'),
+		capture: true
+	},
+	blur: {
+		base: eventListenerSupport ? 'blur' : 'focusout',
+		capture: true
+	}
+};
 
-var methods = {};
-['get', 'post', 'put', 'delete', 'GET', 'POST', 'PUT', 'DELETE'].each(function(method){
-	methods[method] = function(data){
-		return this.send({
-			data: data,
-			method: method
-		});
+/*<ltIE9>*/
+var _key = '$delegation:';
+var formObserver = function(type){
+
+	return {
+
+		base: 'focusin',
+
+		remove: function(self, uid){
+			var list = self.retrieve(_key + type + 'listeners', {})[uid];
+			if (list && list.forms) for (var i = list.forms.length; i--;){
+				list.forms[i].removeEvent(type, list.fns[i]);
+			}
+		},
+
+		listen: function(self, match, fn, event, target, uid){
+			var form = (target.get('tag') == 'form') ? target : event.target.getParent('form');
+			if (!form) return;
+
+			var listeners = self.retrieve(_key + type + 'listeners', {}),
+				listener = listeners[uid] || {forms: [], fns: []},
+				forms = listener.forms, fns = listener.fns;
+
+			if (forms.indexOf(form) != -1) return;
+			forms.push(form);
+
+			var _fn = function(event){
+				bubbleUp(self, match, fn, event, target);
+			};
+			form.addEvent(type, _fn);
+			fns.push(_fn);
+
+			listeners[uid] = listener;
+			self.store(_key + type + 'listeners', listeners);
+		}
 	};
+};
+
+var inputObserver = function(type){
+	return {
+		base: 'focusin',
+		listen: function(self, match, fn, event, target){
+			var events = {blur: function(){
+				this.removeEvents(events);
+			}};
+			events[type] = function(event){
+				bubbleUp(self, match, fn, event, target);
+			};
+			event.target.addEvents(events);
+		}
+	};
+};
+
+if (!eventListenerSupport) Object.append(map, {
+	submit: formObserver('submit'),
+	reset: formObserver('reset'),
+	change: inputObserver('change'),
+	select: inputObserver('select')
 });
+/*</ltIE9>*/
 
-Request.implement(methods);
+var proto = Element.prototype,
+	addEvent = proto.addEvent,
+	removeEvent = proto.removeEvent;
 
-Element.Properties.send = {
+var relay = function(old, method){
+	return function(type, fn, useCapture){
+		if (type.indexOf(':relay') == -1) return old.call(this, type, fn, useCapture);
+		var parsed = Slick.parse(type).expressions[0][0];
+		if (parsed.pseudos[0].key != 'relay') return old.call(this, type, fn, useCapture);
+		var newType = parsed.tag;
+		parsed.pseudos.slice(1).each(function(pseudo){
+			newType += ':' + pseudo.key + (pseudo.value ? '(' + pseudo.value + ')' : '');
+		});
+		old.call(this, type, fn);
+		return method.call(this, newType, parsed.pseudos[0].value, fn);
+	};
+};
 
-	set: function(options){
-		var send = this.get('send').cancel();
-		send.setOptions(options);
-		return this;
+var delegation = {
+
+	addEvent: function(type, match, fn){
+		var storage = this.retrieve('$delegates', {}), stored = storage[type];
+		if (stored) for (var _uid in stored){
+			if (stored[_uid].fn == fn && stored[_uid].match == match) return this;
+		}
+
+		var _type = type, _match = match, _fn = fn, _map = map[type] || {};
+		type = _map.base || _type;
+
+		match = function(target){
+			return Slick.match(target, _match);
+		};
+
+		var elementEvent = Element.Events[_type];
+		if (elementEvent && elementEvent.condition){
+			var __match = match, condition = elementEvent.condition;
+			match = function(target, event){
+				return __match(target, event) && condition.call(target, event, type);
+			};
+		}
+
+		var self = this, uid = String.uniqueID();
+		var delegator = _map.listen ? function(event, target){
+			if (!target && event && event.target) target = event.target;
+			if (target) _map.listen(self, match, fn, event, target, uid);
+		} : function(event, target){
+			if (!target && event && event.target) target = event.target;
+			if (target) bubbleUp(self, match, fn, event, target);
+		};
+
+		if (!stored) stored = {};
+		stored[uid] = {
+			match: _match,
+			fn: _fn,
+			delegator: delegator
+		};
+		storage[_type] = stored;
+		return addEvent.call(this, type, delegator, _map.capture);
 	},
 
-	get: function(){
-		var send = this.retrieve('send');
-		if (!send){
-			send = new Request({
-				data: this, link: 'cancel', method: this.get('method') || 'post', url: this.get('action')
-			});
-			this.store('send', send);
+	removeEvent: function(type, match, fn, _uid){
+		var storage = this.retrieve('$delegates', {}), stored = storage[type];
+		if (!stored) return this;
+
+		if (_uid){
+			var _type = type, delegator = stored[_uid].delegator, _map = map[type] || {};
+			type = _map.base || _type;
+			if (_map.remove) _map.remove(this, _uid);
+			delete stored[_uid];
+			storage[_type] = stored;
+			return removeEvent.call(this, type, delegator);
 		}
-		return send;
+
+		var __uid, s;
+		if (fn) for (__uid in stored){
+			s = stored[__uid];
+			if (s.match == match && s.fn == fn) return delegation.removeEvent.call(this, type, match, fn, __uid);
+		} else for (__uid in stored){
+			s = stored[__uid];
+			if (s.match == match) delegation.removeEvent.call(this, type, match, s.fn, __uid);
+		}
+		return this;
 	}
 
 };
 
-Element.implement({
-
-	send: function(url){
-		var sender = this.get('send');
-		sender.send({data: this, url: url || sender.options.url});
-		return this;
-	}
-
+[Element, Window, Document].invoke('implement', {
+	addEvent: relay(addEvent, delegation.addEvent),
+	removeEvent: relay(removeEvent, delegation.removeEvent)
 });
 
 })();
@@ -4870,188 +4837,108 @@ Element.implement({
 /*
 ---
 
-name: Request.HTML
+name: DOMReady
 
-description: Extends the basic Request Class with additional methods for interacting with HTML responses.
+description: Contains the custom event domready.
 
 license: MIT-style license.
 
-requires: [Element, Request]
+requires: [Browser, Element, Element.Event]
 
-provides: Request.HTML
+provides: [DOMReady, DomReady]
 
 ...
 */
 
-Request.HTML = new Class({
+(function(window, document){
 
-	Extends: Request,
+var ready,
+	loaded,
+	checks = [],
+	shouldPoll,
+	timer,
+	testElement = document.createElement('div');
 
-	options: {
-		update: false,
-		append: false,
-		evalScripts: true,
-		filter: false,
-		headers: {
-			Accept: 'text/html, application/xml, text/xml, */*'
-		}
-	},
+var domready = function(){
+	clearTimeout(timer);
+	if (ready) return;
+	Browser.loaded = ready = true;
+	document.removeListener('DOMContentLoaded', domready).removeListener('readystatechange', check);
 
-	success: function(text){
-		var options = this.options, response = this.response;
-
-		response.html = text.stripScripts(function(script){
-			response.javascript = script;
-		});
-
-		var match = response.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-		if (match) response.html = match[1];
-		var temp = new Element('div').set('html', response.html);
-
-		response.tree = temp.childNodes;
-		response.elements = temp.getElements('*');
-
-		if (options.filter) response.tree = response.elements.filter(options.filter);
-		if (options.update) document.id(options.update).empty().set('html', response.html);
-		else if (options.append) document.id(options.append).adopt(temp.getChildren());
-		if (options.evalScripts) Browser.exec(response.javascript);
-
-		this.onSuccess(response.tree, response.elements, response.html, response.javascript);
-	}
-
-});
-
-Element.Properties.load = {
-
-	set: function(options){
-		var load = this.get('load').cancel();
-		load.setOptions(options);
-		return this;
-	},
-
-	get: function(){
-		var load = this.retrieve('load');
-		if (!load){
-			load = new Request.HTML({data: this, link: 'cancel', update: this, method: 'get'});
-			this.store('load', load);
-		}
-		return load;
-	}
-
+	document.fireEvent('domready');
+	window.fireEvent('domready');
 };
 
-Element.implement({
-
-	load: function(){
-		this.get('load').send(Array.link(arguments, {data: Type.isObject, url: Type.isString}));
-		return this;
+var check = function(){
+	for (var i = checks.length; i--;) if (checks[i]()){
+		domready();
+		return true;
 	}
+	return false;
+};
 
+var poll = function(){
+	clearTimeout(timer);
+	if (!check()) timer = setTimeout(poll, 10);
+};
+
+document.addListener('DOMContentLoaded', domready);
+
+/*<ltIE8>*/
+// doScroll technique by Diego Perini http://javascript.nwbox.com/IEContentLoaded/
+// testElement.doScroll() throws when the DOM is not ready, only in the top window
+var doScrollWorks = function(){
+	try {
+		testElement.doScroll();
+		return true;
+	} catch (e){}
+	return false;
+};
+// If doScroll works already, it can't be used to determine domready
+//   e.g. in an iframe
+if (testElement.doScroll && !doScrollWorks()){
+	checks.push(doScrollWorks);
+	shouldPoll = true;
+}
+/*</ltIE8>*/
+
+if (document.readyState) checks.push(function(){
+	var state = document.readyState;
+	return (state == 'loaded' || state == 'complete');
 });
 
+if ('onreadystatechange' in document) document.addListener('readystatechange', check);
+else shouldPoll = true;
 
-/*
----
+if (shouldPoll) poll();
 
-name: JSON
+Element.Events.domready = {
+	onAdd: function(fn){
+		if (ready) fn.call(this);
+	}
+};
 
-description: JSON encoder and decoder.
-
-license: MIT-style license.
-
-See Also: <http://www.json.org/>
-
-requires: [Array, String, Number, Function]
-
-provides: JSON
-
-...
-*/
-
-if (!this.JSON) this.JSON = {};
-
-
-
-Object.append(JSON, {
-
-	$specialChars: {'\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\'},
-
-	$replaceChars: function(chr){
-		return JSON.$specialChars[chr] || '\\u00' + Math.floor(chr.charCodeAt() / 16).toString(16) + (chr.charCodeAt() % 16).toString(16);
+// Make sure that domready fires before load
+Element.Events.load = {
+	base: 'load',
+	onAdd: function(fn){
+		if (loaded && this == window) fn.call(this);
 	},
-
-	encode: function(obj){
-		switch (typeOf(obj)){
-			case 'string':
-				return '"' + obj.replace(/[\x00-\x1f\\"]/g, JSON.$replaceChars) + '"';
-			case 'array':
-				return '[' + String(obj.map(JSON.encode).clean()) + ']';
-			case 'object': case 'hash':
-				var string = [];
-				Object.each(obj, function(value, key){
-					var json = JSON.encode(value);
-					if (json) string.push(JSON.encode(key) + ':' + json);
-				});
-				return '{' + string + '}';
-			case 'number': case 'boolean': return String(obj);
-			case 'null': return 'null';
+	condition: function(){
+		if (this == window){
+			domready();
+			delete Element.Events.load;
 		}
-		return null;
-	},
-
-	decode: function(string, secure){
-		if (typeOf(string) != 'string' || !string.length) return null;
-		if (secure && !(/^[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]*$/).test(string.replace(/\\./g, '@').replace(/"[^"\\\n\r]*"/g, ''))) return null;
-		return eval('(' + string + ')');
+		return true;
 	}
+};
 
+// This is based on the custom load event
+window.addEvent('load', function(){
+	loaded = true;
 });
 
-
-/*
----
-
-name: Request.JSON
-
-description: Extends the basic Request Class with additional methods for sending and receiving JSON data.
-
-license: MIT-style license.
-
-requires: [Request, JSON]
-
-provides: Request.JSON
-
-...
-*/
-
-Request.JSON = new Class({
-
-	Extends: Request,
-
-	options: {
-		secure: true
-	},
-
-	initialize: function(options){
-		this.parent(options);
-		Object.append(this.headers, {
-			'Accept': 'application/json',
-			'X-Request': 'JSON'
-		});
-	},
-
-	success: function(text){
-		var secure = this.options.secure;
-		var json = this.response.json = Function.attempt(function(){
-			return JSON.decode(text, secure);
-		});
-
-		if (json == null) this.onFailure();
-		else this.onSuccess(json, text);
-	}
-
-});
-
+})(window, document);
 
 /*
 ---
@@ -5065,7 +4952,7 @@ license: MIT-style license.
 credits:
   - Based on the functions by Peter-Paul Koch (http://quirksmode.org).
 
-requires: Options
+requires: [Options, Browser]
 
 provides: Cookie
 
@@ -5128,230 +5015,75 @@ Cookie.dispose = function(key, options){
 	return new Cookie(key, options).dispose();
 };
 
-
 /*
 ---
 
-name: DOMReady
+name: JSON
 
-description: Contains the custom event domready.
+description: JSON encoder and decoder.
 
 license: MIT-style license.
 
-requires: [Browser, Element, Element.Event]
+SeeAlso: <http://www.json.org/>
 
-provides: [DOMReady, DomReady]
+requires: [Array, String, Number, Function]
+
+provides: JSON
 
 ...
 */
 
-(function(window, document){
-
-var ready,
-	loaded,
-	checks = [],
-	shouldPoll,
-	timer,
-	isFramed = true;
-
-// Thanks to Rich Dougherty <http://www.richdougherty.com/>
-try {
-	isFramed = window.frameElement != null;
-} catch(e){}
-
-var domready = function(){
-	clearTimeout(timer);
-	if (ready) return;
-	Browser.loaded = ready = true;
-	document.removeListener('DOMContentLoaded', domready).removeListener('readystatechange', check);
-	
-	document.fireEvent('domready');
-	window.fireEvent('domready');
-};
-
-var check = function(){
-	for (var i = checks.length; i--;) if (checks[i]()){
-		domready();
-		return true;
-	}
-
-	return false;
-};
-
-var poll = function(){
-	clearTimeout(timer);
-	if (!check()) timer = setTimeout(poll, 10);
-};
-
-document.addListener('DOMContentLoaded', domready);
-
-// doScroll technique by Diego Perini http://javascript.nwbox.com/IEContentLoaded/
-var testElement = document.createElement('div');
-if (testElement.doScroll && !isFramed){
-	checks.push(function(){
-		try {
-			testElement.doScroll();
-			return true;
-		} catch (e){}
-
-		return false;
-	});
-	shouldPoll = true;
-}
-
-if (document.readyState) checks.push(function(){
-	var state = document.readyState;
-	return (state == 'loaded' || state == 'complete');
-});
-
-if ('onreadystatechange' in document) document.addListener('readystatechange', check);
-else shouldPoll = true;
-
-if (shouldPoll) poll();
-
-Element.Events.domready = {
-	onAdd: function(fn){
-		if (ready) fn.call(this);
-	}
-};
-
-// Make sure that domready fires before load
-Element.Events.load = {
-	base: 'load',
-	onAdd: function(fn){
-		if (loaded && this == window) fn.call(this);
-	},
-	condition: function(){
-		if (this == window){
-			domready();
-			delete Element.Events.load;
-		}
-		
-		return true;
-	}
-};
-
-// This is based on the custom load event
-window.addEvent('load', function(){
-	loaded = true;
-});
-
-})(window, document);
-
-
-/*
----
-
-name: Swiff
-
-description: Wrapper for embedding SWF movies. Supports External Interface Communication.
-
-license: MIT-style license.
-
-credits:
-  - Flash detection & Internet Explorer + Flash Player 9 fix inspired by SWFObject.
-
-requires: [Options, Object]
-
-provides: Swiff
-
-...
-*/
+if (typeof JSON == 'undefined') this.JSON = {};
 
 (function(){
 
-var id = 0;
+var special = {'\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"' : '\\"', '\\': '\\\\'};
 
-var Swiff = this.Swiff = new Class({
+var escape = function(chr){
+	return special[chr] || '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4);
+};
 
-	Implements: Options,
+JSON.validate = function(string){
+	string = string.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '@').
+					replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, ']').
+					replace(/(?:^|:|,)(?:\s*\[)+/g, '');
 
-	options: {
-		id: null,
-		height: 1,
-		width: 1,
-		container: null,
-		properties: {},
-		params: {
-			quality: 'high',
-			allowScriptAccess: 'always',
-			wMode: 'window',
-			swLiveConnect: true
-		},
-		callBacks: {},
-		vars: {}
-	},
+	return (/^[\],:{}\s]*$/).test(string);
+};
 
-	toElement: function(){
-		return this.object;
-	},
+JSON.encode = JSON.stringify ? function(obj){
+	return JSON.stringify(obj);
+} : function(obj){
+	if (obj && obj.toJSON) obj = obj.toJSON();
 
-	initialize: function(path, options){
-		this.instance = 'Swiff_' + id++;
-
-		this.setOptions(options);
-		options = this.options;
-		var id = this.id = options.id || this.instance;
-		var container = document.id(options.container);
-
-		Swiff.CallBacks[this.instance] = {};
-
-		var params = options.params, vars = options.vars, callBacks = options.callBacks;
-		var properties = Object.append({height: options.height, width: options.width}, options.properties);
-
-		var self = this;
-
-		for (var callBack in callBacks){
-			Swiff.CallBacks[this.instance][callBack] = (function(option){
-				return function(){
-					return option.apply(self.object, arguments);
-				};
-			})(callBacks[callBack]);
-			vars[callBack] = 'Swiff.CallBacks.' + this.instance + '.' + callBack;
-		}
-
-		params.flashVars = Object.toQueryString(vars);
-		if (Browser.ie){
-			properties.classid = 'clsid:D27CDB6E-AE6D-11cf-96B8-444553540000';
-			params.movie = path;
-		} else {
-			properties.type = 'application/x-shockwave-flash';
-		}
-		properties.data = path;
-
-		var build = '<object id="' + id + '"';
-		for (var property in properties) build += ' ' + property + '="' + properties[property] + '"';
-		build += '>';
-		for (var param in params){
-			if (params[param]) build += '<param name="' + param + '" value="' + params[param] + '" />';
-		}
-		build += '</object>';
-		this.object = ((container) ? container.empty() : new Element('div')).set('html', build).firstChild;
-	},
-
-	replaces: function(element){
-		element = document.id(element, true);
-		element.parentNode.replaceChild(this.toElement(), element);
-		return this;
-	},
-
-	inject: function(element){
-		document.id(element, true).appendChild(this.toElement());
-		return this;
-	},
-
-	remote: function(){
-		return Swiff.remote.apply(Swiff, [this.toElement()].extend(arguments));
+	switch (typeOf(obj)){
+		case 'string':
+			return '"' + obj.replace(/[\x00-\x1f\\"]/g, escape) + '"';
+		case 'array':
+			return '[' + obj.map(JSON.encode).clean() + ']';
+		case 'object': case 'hash':
+			var string = [];
+			Object.each(obj, function(value, key){
+				var json = JSON.encode(value);
+				if (json) string.push(JSON.encode(key) + ':' + json);
+			});
+			return '{' + string + '}';
+		case 'number': case 'boolean': return '' + obj;
+		case 'null': return 'null';
 	}
 
-});
+	return null;
+};
 
-Swiff.CallBacks = {};
+JSON.decode = function(string, secure){
+	if (!string || typeOf(string) != 'string') return null;
 
-Swiff.remote = function(obj, fn){
-	var rs = obj.CallFunction('<invoke name="' + fn + '" returntype="javascript">' + __flash__argumentsToXML(arguments, 2) + '</invoke>');
-	return eval(rs);
+	if (secure || JSON.secure){
+		if (JSON.parse) return JSON.parse(string);
+		if (!JSON.validate(string)) throw new Error('JSON could not decode the input; security is enabled and the value is not secure.');
+	}
+
+	return eval('(' + string + ')');
 };
 
 })();
-
