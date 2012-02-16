@@ -30,7 +30,7 @@ this.Collapse.LocalStorage = new Class({
 	},
 
 	setState: function(element, state){
-		this.parent(element, state)
+		this.parent(element, state);
 		localStorage.setItem(this.key, JSON.encode(this.state));
 		return this;
 	}
