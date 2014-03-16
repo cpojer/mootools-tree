@@ -39,6 +39,10 @@
 
 				checkDrop: function(element){
 					return !element.hasClass('nodrop');
+				},
+
+				onSelect: function(el){
+					console.log($(el).get('text'));
 				}
 
 			});
