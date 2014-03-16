@@ -39,6 +39,10 @@
 
 				checkDrop: function(element){
 					return !element.hasClass('nodrop');
+				},
+
+				onSelect: function(el){
+					console.log($(el).get('text'));
 				}
 
 			});
@@ -100,7 +104,7 @@
 				<li><span>Test 3.4</span></li>
 			</ul>
 		</li>
-		<li class="nodrop"><span>Test 4 (You can't drop on me!)</span></li>
+		<li class="nodrop" data-name="minombre"><span>Test 4 (You can't drop on me!)</span></li>
 		<li class="nodrag"><span>Test 5 (You can't drag me!)</span></li>
 	</ul>
 

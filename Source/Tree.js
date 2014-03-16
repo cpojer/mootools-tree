@@ -23,7 +23,10 @@ this.Tree = new Class({
 	Implements: [Options, Events, Class.Binds, Class.Singleton],
 
 	options: {
-		/*onChange: function(){},*/
+		/*
+			onChange: function(){},
+			onSelect: function(element){}
+		*/
 		indicatorOffset: 0,
 		cloneOffset: {x: 16, y: 16},
 		cloneOpacity: 0.8,
@@ -83,6 +86,8 @@ this.Tree = new Class({
 			onDrag: this.bound('onDrag'),
 			onDrop: this.bound('onDrop')
 		}).start(event);
+
+		this.fireEvent('select', [element]);
 	},
 
 	mouseup: function(){
