@@ -57,6 +57,7 @@ The return value can then be encoded and sent to the server
 
 #### Events
 * onChange(): fires when the tree changes. Can be used in conjunction with the 'serialize' method.
+* onSelect(): fires when mouse is on a item.  element selected is send to the function.
 
 ### Collapse
 
